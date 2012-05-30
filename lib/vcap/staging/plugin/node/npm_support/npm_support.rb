@@ -27,14 +27,12 @@ module NpmSupport
                                 @secure_uid, @secure_gid)
     return unless @npm_helper.npm_version
 
-    @app_dir = File.expand_path(File.join(destination_directory, "app"))
-
     cache_base_dir = StagingPlugin.platform_config["cache"]
     cache_dir  = File.join(cache_base_dir, "node_modules", library_version)
     @cache = NpmCache.new(cache_dir, logger)
 
     logger.info("Installing dependencies. Node version #{runtime["version"]}")
-    install_packages(@dependencies, @app_dir)
+    install_packages(@dependencies, app_directory)
   end
 
   def should_install_packages?
@@ -42,7 +40,7 @@ module NpmSupport
 
     return true if @vcap_config["ignoreNodeModules"]
 
-    user_packages_dir = File.join(destination_directory, "app", "node_modules")
+    user_packages_dir = File.join(app_directory, "node_modules")
     !File.exists?(user_packages_dir)
   end
 
@@ -58,7 +56,7 @@ module NpmSupport
   end
 
   def get_dependencies
-    shrinkwrap_file = File.join(destination_directory, "app", "npm-shrinkwrap.json")
+    shrinkwrap_file = File.join(app_directory, "npm-shrinkwrap.json")
     return unless File.exists?(shrinkwrap_file)
     shrinkwrap_config = Yajl::Parser.parse(File.new(shrinkwrap_file, "r"))
     if shrinkwrap_config.is_a?(Hash) && shrinkwrap_config["dependencies"].is_a?(Hash)
