@@ -10,8 +10,48 @@ describe "A simple Node.js app being staged" do
     stage :node do |staged_dir|
       start_script = File.join(staged_dir, "startup")
       start_script.should be_executable_file
+    end
+  end
+
+  it "generates an auto-config script by default" do
+    stage :node do |staged_dir|
+      File.exists?(File.join(staged_dir, "app", "autoconfig.js")).should be_true
+      start_script = File.join(staged_dir, "startup")
+      start_script.should be_executable_file
       script_body = File.read(start_script)
       script_body.should == <<-EXPECTED
+#!/bin/bash
+cd app
+%VCAP_LOCAL_RUNTIME% $NODE_ARGS autoconfig.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+STARTED=$!
+echo "$STARTED" >> ../run.pid
+wait $STARTED
+EXPECTED
+      autoconfig_script = File.join(staged_dir, "app", "autoconfig.js")
+      autoconfig_body = File.read(autoconfig_script)
+      autoconfig_body.should == <<-EXPECTED
+process.argv[1] = require("path").resolve("app.js");
+require("cf-autoconfig");
+process.nextTick(require("module").Module.runMain);
+EXPECTED
+    end
+  end
+end
+
+describe "A Node.js app with auto-config options being staged" do
+
+  describe "with auto-config disabled in cloudfoundry.json" do
+    before do
+      app_fixture :node_skip_autoconfig
+    end
+
+    it "does not generate an auto-config script" do
+      stage :node do |staged_dir|
+        File.exists?(File.join(staged_dir, "app", "autoconfig.js")).should_not be_true
+        start_script = File.join(staged_dir, "startup")
+        start_script.should be_executable_file
+        script_body = File.read(start_script)
+        script_body.should == <<-EXPECTED
 #!/bin/bash
 cd app
 %VCAP_LOCAL_RUNTIME% $NODE_ARGS app.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
@@ -19,12 +59,59 @@ STARTED=$!
 echo "$STARTED" >> ../run.pid
 wait $STARTED
 EXPECTED
+      end
     end
   end
 
-  describe "with a package.json that defines a start script" do
+  describe "with cf-runtime" do
+    before do
+      app_fixture :node_cfruntime
+    end
+
+    it "does not generate an auto-config script" do
+      stage :node do |staged_dir|
+        File.exists?(File.join(staged_dir, "app", "autoconfig.js")).should_not be_true
+        start_script = File.join(staged_dir, "startup")
+        start_script.should be_executable_file
+        script_body = File.read(start_script)
+        script_body.should == <<-EXPECTED
+#!/bin/bash
+cd app
+%VCAP_LOCAL_RUNTIME% $NODE_ARGS app.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+STARTED=$!
+echo "$STARTED" >> ../run.pid
+wait $STARTED
+EXPECTED
+      end
+    end
+  end
+end
+
+describe "A Node.js app being staged with a package.json" do
+
+  describe "that defines a start script" do
     before do
       app_fixture :node_package
+    end
+
+    it "uses it for the start command" do
+      stage :node do |staged_dir|
+        start_script = File.join(staged_dir, "startup")
+        start_script.should be_executable_file
+        autoconfig_script = File.join(staged_dir, "app", "autoconfig.js")
+        autoconfig_body = File.read(autoconfig_script)
+        autoconfig_body.should == <<-EXPECTED
+process.argv[1] = require("path").resolve("bin/app.js");
+require("cf-autoconfig");
+process.nextTick(require("module").Module.runMain);
+EXPECTED
+      end
+    end
+  end
+
+    describe "that defines a start command with several arguments" do
+    before do
+      app_fixture :node_package_arguments
     end
 
     it "uses it for the start command" do
@@ -35,16 +122,24 @@ EXPECTED
         script_body.should == <<-EXPECTED
 #!/bin/bash
 cd app
-%VCAP_LOCAL_RUNTIME% $NODE_ARGS bin/app.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+%VCAP_LOCAL_RUNTIME% $NODE_ARGS autoconfig.js ./bin/app.coffee World $@ > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
 echo "$STARTED" >> ../run.pid
 wait $STARTED
+EXPECTED
+
+        autoconfig_script = File.join(staged_dir, "app", "autoconfig.js")
+        autoconfig_body = File.read(autoconfig_script)
+        autoconfig_body.should == <<-EXPECTED
+process.argv[1] = require("path").resolve("./node_modules/coffee-script/bin/coffee");
+require("cf-autoconfig");
+process.nextTick(require("module").Module.runMain);
 EXPECTED
       end
     end
   end
 
-  describe "with a package.json that defines a start script with no 'node '" do
+  describe "that defines a start script with no 'node '" do
     before do
       app_fixture :node_package_no_exec
     end
@@ -52,20 +147,18 @@ EXPECTED
       stage :node do |staged_dir|
         start_script = File.join(staged_dir, "startup")
         start_script.should be_executable_file
-        script_body = File.read(start_script)
-        script_body.should == <<-EXPECTED
-#!/bin/bash
-cd app
-%VCAP_LOCAL_RUNTIME% $NODE_ARGS ./bin/app.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
-STARTED=$!
-echo "$STARTED" >> ../run.pid
-wait $STARTED
+        autoconfig_script = File.join(staged_dir, "app", "autoconfig.js")
+        autoconfig_body = File.read(autoconfig_script)
+        autoconfig_body.should == <<-EXPECTED
+process.argv[1] = require("path").resolve("./bin/app.js");
+require("cf-autoconfig");
+process.nextTick(require("module").Module.runMain);
 EXPECTED
       end
     end
   end
 
-  describe "with a package.json that does not parse" do
+  describe "that does not parse" do
     before do
       app_fixture :node_package_bad
     end
@@ -75,21 +168,19 @@ EXPECTED
         stage :node do |staged_dir|
           start_script = File.join(staged_dir, "startup")
           start_script.should be_executable_file
-          script_body = File.read(start_script)
-          script_body.should == <<-EXPECTED
-  #!/bin/bash
-  cd app
-  %VCAP_LOCAL_RUNTIME% $NODE_ARGS app.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
-  STARTED=$!
-  echo "$STARTED" >> ../run.pid
-  wait $STARTED
-  EXPECTED
+          autoconfig_script = File.join(staged_dir, "app", "autoconfig.js")
+          autoconfig_body = File.read(autoconfig_script)
+          autoconfig_body.should == <<-EXPECTED
+process.argv[1] = require("path").resolve("app.js");
+require("cf-autoconfig");
+process.nextTick(require("module").Module.runMain);
+EXPECTED
         end
       }.should raise_error
     end
   end
 
-  describe "with a package.json that does not define a start script" do
+  describe "that does not define a start script" do
     before do
       app_fixture :node_package_no_start
     end
@@ -98,14 +189,12 @@ EXPECTED
       stage :node do |staged_dir|
         start_script = File.join(staged_dir, 'startup')
         start_script.should be_executable_file
-        script_body = File.read(start_script)
-        script_body.should == <<-EXPECTED
-#!/bin/bash
-cd app
-%VCAP_LOCAL_RUNTIME% $NODE_ARGS app.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
-STARTED=$!
-echo "$STARTED" >> ../run.pid
-wait $STARTED
+        autoconfig_script = File.join(staged_dir, "app", "autoconfig.js")
+        autoconfig_body = File.read(autoconfig_script)
+        autoconfig_body.should == <<-EXPECTED
+process.argv[1] = require("path").resolve("app.js");
+require("cf-autoconfig");
+process.nextTick(require("module").Module.runMain);
 EXPECTED
       end
     end
@@ -254,5 +343,4 @@ describe "A Node.js app with dependencies being staged" do
       end
     end
   end
-
 end
