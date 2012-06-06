@@ -69,7 +69,7 @@ module NpmSupport
   end
 
   def library_version
-    environment[:runtime] == "node06" ? "06" : "04"
+    runtime['version']
   end
 
   def setup_logger

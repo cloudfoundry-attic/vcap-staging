@@ -50,6 +50,24 @@ class StagingPlugin
     @@manifests ||= {}
   end
 
+   def self.runtimes
+    @@runtimes ||= {}
+  end
+
+  def self.runtime_info
+    runtimes.values
+  end
+
+  def self.runtime_ids
+    runtimes.keys
+  end
+
+  def self.runtime_id(name, version)
+    runtimes.each_pair do  |runtime_id, runtime_values|
+      return runtime_id if (runtime_values[:name] == name && runtime_values[:version] == version)
+    end
+  end
+
   def self.platform_config
     path = File.join(manifest_root, 'platform.yml')
     YAML.load_file(path)
@@ -62,8 +80,6 @@ class StagingPlugin
       # NOTE - Make others as needed for other kinds of package managers.
       FileUtils.mkdir_p File.join(staging_cache_dir, 'gems')
       FileUtils.mkdir_p File.join(staging_cache_dir, "node_modules")
-      # TODO - Validate java runtimes as well.
-      check_ruby_runtimes
     rescue => ex
       puts "Staging environment validation failed: #{ex}"
       exit 1
@@ -90,27 +106,6 @@ class StagingPlugin
     uc_parts.join
   end
 
-  # Checks the existence and version of the Ruby runtimes specified
-  # by the sinatra and rails staging manifests.
-  def self.check_ruby_runtimes
-    (%w[sinatra rails3] & manifests.keys).each do |framework|
-      manifests[framework]['runtimes'].each do |hash|
-        hash.each do |name, properties|
-          exe, ver = properties['executable'], properties['version']
-          ver_pattern = Regexp.new(Regexp.quote(ver))
-          output = get_ruby_version(exe)
-          if $? == 0
-            unless output.strip =~ ver_pattern
-              raise "#{framework} runtime #{name} version was #{output.strip}, expected to match #{ver}*"
-            end
-          else
-            raise "#{framework} staging manifest has a bad runtime: #{name} (#{output.strip})"
-          end
-        end
-      end
-    end
-  end
-
   # Generate a client side consumeable version of the manifest info
   def self.generate_manifests_info
     manifests.each_pair do |name, manifest|
@@ -119,11 +114,8 @@ class StagingPlugin
       appservers = []
 
       manifest['runtimes'].each do |runtime|
-        runtime.each_pair do |runtime_name, runtime_info|
-          runtimes <<  {
-            :name => runtime_name,
-            :version => runtime_info['version'],
-            :description => runtime_info['description'] }
+        runtime.each_pair do |runtime_id, runtime_values|
+          runtimes <<  runtime_data(runtime_values, true)
         end
       end
 
@@ -137,7 +129,6 @@ class StagingPlugin
           end
         end
       end
-
       m = {
         :name => manifest['name'],
         :runtimes => runtimes,
@@ -149,6 +140,18 @@ class StagingPlugin
     end
   end
 
+  def self.generate_runtimes
+    manifests.each_pair do |name, manifest|
+      manifest['runtimes'].each do |runtime|
+        runtime.each_pair do |runtime_id, runtime_values|
+          # We are making the assumption that the values provided by runtime_data
+          # will not differ based on framework
+          runtimes[runtime_id] = runtime_data runtime_values
+        end
+      end
+    end
+  end
+ 
   def self.load_all_manifests
     pattern = File.join(manifest_root, '*.yml')
     Dir[pattern].each do |yaml_file|
@@ -156,16 +159,13 @@ class StagingPlugin
       load_manifest(yaml_file)
     end
     generate_manifests_info
+    generate_runtimes
   end
 
   def self.load_plugin_for(framework)
     framework = framework.to_s
     plugin_path = File.join(staging_root, framework, 'plugin.rb')
     require plugin_path
-    # This loads the default manifest; if a plugin gets passed an alternate
-    # manifest directory, and it finds a framework.yml file, it will replace this.
-    manifest_path = File.join(manifest_root, "#{framework}.yml")
-    load_manifest(manifest_path)
     Object.const_get("#{camelize(framework)}Plugin")
   end
 
@@ -205,6 +205,16 @@ class StagingPlugin
       end
     end
     return nil
+  end
+
+  def self.runtime_data(runtime_values,include_default=false)
+    runtime_data = {:name => runtime_values['name'],
+     :version => runtime_values['version'],
+     :description => runtime_values['description'],
+     :status => runtime_values['status'],
+     :debug_modes=> runtime_values['debug_modes'] }
+    runtime_data[:default]=runtime_values['default'] if include_default
+    runtime_data
   end
 
   # Exits the process with a nonzero status if ARGV does not contain valid
@@ -321,7 +331,9 @@ class StagingPlugin
       @manifest_dir = File.expand_path(manifest_dir)
       StagingPlugin.manifest_root = @manifest_dir
     end
-
+    # Load the associated manifest
+    manifest_path = File.join(StagingPlugin.manifest_root, "#{environment[:framework]}.yml")
+    StagingPlugin.load_manifest(manifest_path)
     # Drop privs before staging
     # res == real, effective, saved
     @staging_gid = gid.to_i if gid
@@ -430,8 +442,6 @@ class StagingPlugin
       hash.each do |name, properties|
         if properties['default']
           chosen = properties
-        else
-          chosen ||= properties
         end
       end
     end

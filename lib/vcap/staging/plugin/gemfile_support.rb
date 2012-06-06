@@ -30,7 +30,7 @@ module GemfileSupport
     app_dir  = File.join(destination_directory, 'app')
     ruby_cmd = "env -i #{safe_env} #{ruby}"
 
-    @task = GemfileTask.new(app_dir, library_version, ruby_cmd, base_dir, @staging_uid, @staging_gid)
+    @task = GemfileTask.new(app_dir, library_version, runtime['version'], ruby_cmd, base_dir, @staging_uid, @staging_gid)
 
     @task.install
     @task.install_bundler
@@ -43,7 +43,8 @@ module GemfileSupport
   end
 
   def library_version
-    environment[:runtime] == "ruby19" ? "1.9.1" : "1.8"
+    #Bundler will not work properly unless directories are named this way
+    runtime['version'] =~ /\A1.9/ ? "1.9.1" : "1.8"
   end
 
   # Can we expect to run this app on Rack?

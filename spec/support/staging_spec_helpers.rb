@@ -6,6 +6,7 @@ module StagingSpecHelpers
   POSTGRESQL_DRIVER_JAR = 'postgresql-9.0-801.jdbc4.jar'
   INSIGHT_AGENT = 'cf-tomcat-agent-javaagent-1.7.1.RELEASE'
   AUTO_CONFIG_GEM_VERSION = '0.0.3'
+  #StagingPlugin.manifest_root=File.join(File.expand_path('..', __FILE__), 'manifests')
 
   # Importantly, this returns a Pathname instance not a String.
   # This allows you to write: app_fixture_base_directory.join('subdir', 'subsubdir')
@@ -55,6 +56,7 @@ module StagingSpecHelpers
                  else
                    app_source
                  end
+    env[:framework]=framework
     stager = plugin_klass.new(source_dir, working_dir, env)
     # I still don't get why it's an array of single key hashes
     # instead of a hash of {name => attrs}
