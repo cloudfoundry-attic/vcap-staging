@@ -1,0 +1,9 @@
+---
+name: "otp_rebar"
+runtimes:
+  - erlang.current:
+      default: true
+app_servers:
+detection:
+  - "releases/*/*.rel": '.'
+staged_services:

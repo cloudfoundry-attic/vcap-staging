@@ -9,7 +9,7 @@ describe "A Standalone app being staged" do
 
     describe "and using Ruby 1.8" do
       it "is packaged with a startup script" do
-        stage(:standalone,{:meta=>{:command=> "ruby app.rb"}, :runtime=> "ruby18"}) do |staged_dir|
+        stage(:standalone,{:meta=>{:command=> "ruby app.rb"}, :runtime=> "ruby18.current"}) do |staged_dir|
           start_script = File.join(staged_dir, 'startup')
           start_script.should be_executable_file
           script_body = File.read(start_script)
@@ -31,7 +31,7 @@ wait $STARTED
         end
       end
       it "installs gems" do
-        stage(:standalone,{:meta=>{:command=> "ruby app.rb"}, :runtime=> "ruby18"}) do |staged_dir|
+        stage(:standalone,{:meta=>{:command=> "ruby app.rb"}, :runtime=> "ruby18.current"}) do |staged_dir|
           gemdir = File.join(staged_dir,'app','rubygems','ruby','1.8')
           Dir.entries(gemdir).should_not == []
         end
@@ -53,7 +53,7 @@ gem "cf-autoconfig"
     end
     describe "and using Ruby 1.9" do
       it "is packaged with a startup script" do
-        stage(:standalone,{:meta=>{:command=> "ruby app.rb"}, :runtime=> "ruby19"}) do |staged_dir|
+        stage(:standalone,{:meta=>{:command=> "ruby app.rb"}, :runtime=> "ruby19.current"}) do |staged_dir|
           start_script = File.join(staged_dir, 'startup')
           start_script.should be_executable_file
           script_body = File.read(start_script)
@@ -75,7 +75,7 @@ wait $STARTED
         end
       end
       it "installs gems" do
-        stage(:standalone,{:meta=>{:command=> "ruby app.rb"}, :runtime=> "ruby19"}) do |staged_dir|
+        stage(:standalone,{:meta=>{:command=> "ruby app.rb"}, :runtime=> "ruby19.current"}) do |staged_dir|
           gemdir = File.join(staged_dir,'app','rubygems','ruby','1.9.1')
           Dir.entries(gemdir).should_not == []
         end
@@ -104,7 +104,7 @@ gem "cf-autoconfig"
 
     describe "and using Ruby 1.8" do
       it "is packaged with a startup script" do
-        stage(:standalone,{:meta=>{:command=> "ruby hello.rb"}, :runtime=> "ruby18"}) do |staged_dir|
+        stage(:standalone,{:meta=>{:command=> "ruby hello.rb"}, :runtime=> "ruby18.current"}) do |staged_dir|
           start_script = File.join(staged_dir, 'startup')
           start_script.should be_executable_file
           script_body = File.read(start_script)
@@ -125,7 +125,7 @@ wait $STARTED
     end
     describe "and using Ruby 1.9" do
       it "is packaged with a startup script" do
-        stage(:standalone,{:meta=>{:command=> "ruby hello.rb"}, :runtime=> "ruby19"}) do |staged_dir|
+        stage(:standalone,{:meta=>{:command=> "ruby hello.rb"}, :runtime=> "ruby19.current"}) do |staged_dir|
           start_script = File.join(staged_dir, 'startup')
           start_script.should be_executable_file
           script_body = File.read(start_script)
@@ -151,7 +151,7 @@ wait $STARTED
       app_fixture :standalone_java
     end
     it "is packaged with a startup script" do
-      stage(:standalone,{:meta=>{:command=> "java $JAVA_OPTS HelloWorld"}, :runtime=> "java", :environment=>{:resources=>{:memory=>512}}}) do |staged_dir|
+      stage(:standalone,{:meta=>{:command=> "java $JAVA_OPTS HelloWorld"}, :runtime=> "java6.current", :environment=>{:resources=>{:memory=>512}}}) do |staged_dir|
           start_script = File.join(staged_dir, 'startup')
           start_script.should be_executable_file
           script_body = File.read(start_script)
@@ -167,7 +167,7 @@ wait $STARTED
         end
     end
     it "creates a temp dir" do
-      stage(:standalone,{:meta=>{:command=> "java $JAVA_OPTS HelloWorld"}, :runtime=> "java", :environment=>{:resources=>{:memory=>512}}}) do |staged_dir|
+      stage(:standalone,{:meta=>{:command=> "java $JAVA_OPTS HelloWorld"}, :runtime=> "java6.current", :environment=>{:resources=>{:memory=>512}}}) do |staged_dir|
           tmp_dir = File.join(staged_dir, 'temp')
           File.exists?(tmp_dir).should == true
         end
@@ -179,7 +179,7 @@ wait $STARTED
       app_fixture :standalone_python
     end
     it "is packaged with a startup script" do
-      stage(:standalone,{:meta=>{:command=> "python HelloWorld.py"}, :runtime=> "python2", :environment=>{:resources=>{:memory=>512}}}) do |staged_dir|
+      stage(:standalone,{:meta=>{:command=> "python HelloWorld.py"}, :runtime=> "python2.current", :environment=>{:resources=>{:memory=>512}}}) do |staged_dir|
           start_script = File.join(staged_dir, 'startup')
           start_script.should be_executable_file
           script_body = File.read(start_script)

@@ -20,10 +20,10 @@ class StandalonePlugin < StagingPlugin
 
   private
    def runtime_specific_staging
-    if environment[:runtime] =~ /\Aruby/
+    if runtime['flavor'] == 'Ruby'
       compile_gems
       install_autoconfig_gem if autoconfig_enabled?
-    elsif environment[:runtime] =~ /\Ajava/
+    elsif runtime['flavor'] == 'Java'
       #Make a temp dir for java.io.tmpdir
       FileUtils.mkdir_p File.join(destination_directory, 'temp')
     end
@@ -35,11 +35,11 @@ class StandalonePlugin < StagingPlugin
 
   def startup_script
     vars = environment_hash
-    if environment[:runtime] =~ /\Aruby/
+    if runtime['flavor'] == 'Ruby'
       ruby_startup_script vars
-    elsif environment[:runtime] =~ /\Ajava/
+    elsif runtime['flavor'] == 'Java'
       java_startup_script vars
-    elsif environment[:runtime] =~ /\Apython/
+    elsif runtime['flavor'] == 'Python'
       python_startup_script vars
     else
       generate_startup_script(vars)

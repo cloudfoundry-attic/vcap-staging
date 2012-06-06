@@ -3,10 +3,11 @@ require "fileutils"
 
 class GemfileTask
 
-  def initialize(app_dir, library_version, ruby_cmd, base_dir, uid=nil, gid=nil)
+  def initialize(app_dir, library_version, ruby_version, ruby_cmd, base_dir, uid=nil, gid=nil)
     @app_dir         = File.expand_path(app_dir)
     @library_version = library_version
-    @cache_base_dir  = File.join(base_dir, @library_version)
+    # Cache the gems by specific version of Ruby used to install them
+    @cache_base_dir  = File.join(base_dir, ruby_version)
 
     @ruby_cmd = ruby_cmd
     @uid = uid

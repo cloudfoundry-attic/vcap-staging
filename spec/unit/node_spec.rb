@@ -115,7 +115,7 @@ end
 describe "A Node.js app with dependencies being staged" do
 
   def node_config
-    runtime_staging_config("node", "node")
+    runtime_staging_config("node", "node04.current")
   end
 
   # check if node manifest has specified path to npm

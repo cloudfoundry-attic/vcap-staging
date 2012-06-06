@@ -1,19 +1,13 @@
 ---
-name: "rack"
+name: "rails3"
 runtimes:
-  - "ruby18":
-      version: "1.8.7" # FIXME change to 1.8.7-p334
-      description: "Ruby 1.8.7"
-      executable: "/usr/bin/ruby"
+  - ruby18.current:
       default: true
       environment:
        rails_env: "production"
        bundle_gemfile:
        rack_env: "production"
-  - "ruby19":
-      version: "1.9.2p180"
-      description: "Ruby 1.9.2"
-      executable: "ruby"
+  - ruby19.current:
       environment:
        rails_env: "production"
        bundle_gemfile:
@@ -21,17 +15,15 @@ runtimes:
 app_servers:
   - "thin":
       description: "Thin"
-      executable: false # determined during staging
+      executable: false
       default: true
 detection:
-  - "config.ru": true
-  - "config/environment.rb": false # and config/environment.rb must not exist
+  - "config/application.rb": true
+  - "config/environment.rb": true
 staged_services:
   - "name": "mysql"
     "version": "*"
   - "name": "postgresql"
     "version": "*"
-  - "name": "redis"
-    "version": "2"
 
 # vim: filetype=yaml
