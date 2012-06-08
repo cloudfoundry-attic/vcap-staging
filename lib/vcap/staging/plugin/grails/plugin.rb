@@ -4,9 +4,6 @@ require 'nokogiri'
 
 class GrailsPlugin < JavaWebPlugin
   VMC_GRAILS_PLUGIN = "CloudFoundryGrailsPlugin"
-  def framework
-    'grails'
-  end
 
   def autostaging_template
     File.join(File.dirname(__FILE__), 'autostaging_template_grails.xml')
