@@ -42,13 +42,13 @@ module StagingSpecHelpers
   # You must manually clean up the directory thus created.
   # If called with a block, yields the staged directory as a Pathname, and
   # automatically deletes it when the block returns.
-  def stage(framework, env = {})
+  def stage(env = {})
     raise "Call 'app_fixture :name_of_app' before staging" unless @app_fixture
-    plugin_klass = StagingPlugin.load_plugin_for(framework)
+    plugin_klass = StagingPlugin.load_plugin_for(env[:framework][:name])
     working_dir = Dir.mktmpdir("#{@app_fixture}-staged")
     source_tempdir = nil
     # TODO - There really needs to be a single helper to track tempdirs.
-    source_dir = case framework
+    source_dir = case env[:framework][:name]
                  when /spring|grails|lift|java_web/
                    source_tempdir = Dir.mktmpdir(@app_fixture)
                    app_source(source_tempdir)
@@ -56,21 +56,17 @@ module StagingSpecHelpers
                    app_source
                  end
     env[:environment] ||= []
-    stager = plugin_klass.new(source_dir, working_dir, env)
-    # I still don't get why it's an array of single key hashes
-    # instead of a hash of {name => attrs}
-    StagingPlugin.manifests[framework.to_s]['runtimes'].each do |runtime|
-      runtime.each do |name, attrs|
-        if ENV["VCAP_RUNTIME_#{name.upcase}"]
-          attrs['executable'] = ENV["VCAP_RUNTIME_#{name.upcase}"]
-          # When we aren't doing anything patchlevel specific, the runtime
-          # version can be overridden here
-          if ENV["VCAP_RUNTIME_#{name.upcase}_VER"]
-            attrs['version'] = ENV["VCAP_RUNTIME_#{name.upcase}_VER"]
-          end
-        end
+
+    runtime_name = env[:runtime][:name].upcase
+    if ENV["VCAP_RUNTIME_#{runtime_name}"]
+      env[:runtime][:executable] = ENV["VCAP_RUNTIME_#{runtime_name}"]
+      # When we aren't doing anything patchlevel specific, the runtime
+      # version can be overridden here
+      if ENV["VCAP_RUNTIME_#{runtime_name}_VER"]
+        env[:runtime][:version] = ENV["VCAP_RUNTIME_#{runtime_name}_VER"]
       end
     end
+    stager = plugin_klass.new(source_dir, working_dir, env)
     stager.stage_application
     return working_dir unless block_given?
     Dir.chdir(working_dir) do
@@ -80,15 +76,6 @@ module StagingSpecHelpers
   ensure
     FileUtils.rm_r(working_dir) if working_dir
     FileUtils.rm_r(source_tempdir) if source_tempdir
-  end
-
-  def runtime_staging_config(framework, runtime)
-    StagingPlugin.load_all_manifests
-    StagingPlugin.manifests[framework]["runtimes"].each do |runtime_info|
-      runtime_info.each do |name, attrs|
-        return attrs if name == runtime
-      end
-    end
   end
 end
 

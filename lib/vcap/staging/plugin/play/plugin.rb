@@ -3,10 +3,6 @@ class PlayPlugin < StagingPlugin
   include JavaDatabaseSupport
   include JavaAutoconfig
 
-  def framework
-    'play'
-  end
-
   def stage_application
     Dir.chdir(destination_directory) do
       create_app_directories
@@ -44,12 +40,10 @@ class PlayPlugin < StagingPlugin
   end
 
   def startup_script
-    vars = environment_hash
-    generate_startup_script(vars)
+    generate_startup_script
   end
 
   def stop_script
-    vars = environment_hash
-    generate_stop_script(vars)
+    generate_stop_script
   end
 end

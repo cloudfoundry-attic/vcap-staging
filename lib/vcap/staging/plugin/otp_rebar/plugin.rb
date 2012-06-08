@@ -7,12 +7,6 @@ class OtpRebarPlugin < StagingPlugin
     @runtime_info[runtime_name]
   end
 
-  # TODO - Is there a way to avoid this without some kind of 'register' callback?
-  # e.g. StagingPlugin.register('sinatra', __FILE__)
-  def framework
-    'otp_rebar'
-  end
-
   def stage_application
     Dir.chdir(destination_directory) do
       create_app_directories
@@ -47,17 +41,16 @@ class OtpRebarPlugin < StagingPlugin
   private
 
   def startup_script
-    vars = environment_hash
-    generate_startup_script(vars)
+    generate_startup_script
   end
 
   # We can't always assume that the libraries being pointed to in the release are compatible with our
   # platform. For instance, if the release is built on a Mac, then included shared libraries won't work
   # on Linux. So we'll rewrite all of the libs that are builtin to be symlinks to the runtime.
   def rewrite_libs
-    runtime_version = runtime['version']
+    runtime_version = runtime[:version]
     runtime_info = runtime_info_for(runtime_version)
-    runtime_dir = File.expand_path('../..', runtime['executable'])
+    runtime_dir = File.expand_path('../..', runtime[:executable])
 
     # Ensure that our runtime matches the one that the libraries were packaged for
     start_erl_data = File.read('app/releases/start_erl.data')
@@ -83,8 +76,7 @@ class OtpRebarPlugin < StagingPlugin
   end
 
   def stop_script
-    vars = environment_hash
-    generate_stop_script(vars)
+    generate_stop_script
   end
 
   # We want to alter the VM so that it doesn't want input, and that it doesn't need the double INT to close.
