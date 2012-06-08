@@ -1,18 +1,15 @@
 ---
-name: "php"
+name: "java_web"
 runtimes:
-  - "php":
-      description: "PHP 5"
-      version: "5.3"
-      executable: "php"
+  - "java":
       default: true
 app_servers:
-  - "apache":
-      description: "Apache"
+  - "tomcat":
+      description: "Tomcat"
       executable: "false"
       default: true
 detection:
-  - "*.php": true
+  - "*.war": true
 staged_services:
   - "name": "mysql"
     "version": "*"
