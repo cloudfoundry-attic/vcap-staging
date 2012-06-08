@@ -2,10 +2,6 @@ class StandalonePlugin < StagingPlugin
   include GemfileSupport
   include RubyAutoconfig
 
-  def framework
-    'standalone'
-  end
-
   def stage_application
     Dir.chdir(destination_directory) do
       create_app_directories
@@ -20,10 +16,10 @@ class StandalonePlugin < StagingPlugin
 
   private
    def runtime_specific_staging
-    if environment[:runtime] =~ /\Aruby/
+    if runtime[:name] =~ /\Aruby/
       compile_gems
       install_autoconfig_gem if autoconfig_enabled?
-    elsif environment[:runtime] =~ /\Ajava/
+    elsif runtime[:name] =~ /\Ajava/
       #Make a temp dir for java.io.tmpdir
       FileUtils.mkdir_p File.join(destination_directory, 'temp')
     end
@@ -34,22 +30,21 @@ class StandalonePlugin < StagingPlugin
   end
 
   def startup_script
-    vars = environment_hash
-    if environment[:runtime] =~ /\Aruby/
-      ruby_startup_script vars
-    elsif environment[:runtime] =~ /\Ajava/
-      java_startup_script vars
-    elsif environment[:runtime] =~ /\Apython/
-      python_startup_script vars
+    if runtime[:name] =~ /\Aruby/
+      ruby_startup_script
+    elsif runtime[:name] =~ /\Ajava/
+      java_startup_script
+    elsif runtime[:name] =~ /\Apython/
+      python_startup_script
     else
-      generate_startup_script(vars)
+      generate_startup_script
     end
   end
 
-  def ruby_startup_script vars
+  def ruby_startup_script
+    vars = {}
     if uses_bundler?
-      path = vars['PATH'] ? vars['PATH'] : "$PATH"
-      vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:#{path}"
+      vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:$PATH"
       vars['GEM_PATH'] = vars['GEM_HOME'] = "$PWD/app/rubygems/ruby/#{library_version}"
       if autoconfig_enabled?
         vars['RUBYOPT'] = "-I$PWD/ruby #{autoconfig_load_path} -rcfautoconfig -rstdsync"
@@ -71,20 +66,21 @@ class StandalonePlugin < StagingPlugin
     cmds.join("\n")
   end
 
-  def java_startup_script vars
+  def java_startup_script
+    vars = {}
     java_sys_props = "-Djava.io.tmpdir=$PWD/temp"
     vars['JAVA_OPTS'] = "$JAVA_OPTS -Xms#{application_memory}m -Xmx#{application_memory}m #{java_sys_props}"
     generate_startup_script(vars)
   end
 
-  def python_startup_script vars
+  def python_startup_script
+    vars = {}
     #setup python scripts to sync stdout/stderr to files
     vars['PYTHONUNBUFFERED'] = "true"
     generate_startup_script(vars)
   end
 
   def stop_script
-    vars = environment_hash
-    generate_stop_script(vars)
+    generate_stop_script
   end
 end

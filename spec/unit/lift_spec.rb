@@ -13,7 +13,7 @@ describe "A Lift application being staged without a web.xml in its web config wi
   end
 
   it "should be fail the staging" do
-    lambda { stage(:lift){} }.should raise_error("Web application staging failed: web.xml not found")
+    lambda { stage(lift_staging_env){} }.should raise_error("Web application staging failed: web.xml not found")
   end
 end
 
@@ -23,7 +23,7 @@ describe "A Lift application being staged without a LiftFilter in its web config
   end
 
   it "should fail the staging" do
-    lambda { stage(:lift){} }.should raise_error("Scala / Lift application staging failed: no LiftFilter class found in web.xml")
+    lambda { stage(lift_staging_env){} }.should raise_error("Scala / Lift application staging failed: no LiftFilter class found in web.xml")
   end
 end
 
@@ -33,7 +33,7 @@ describe "A Lift application with only a LiftFilter being staged will contain a 
   end
 
   it "should contain a CloudLiftServicesPropertiesGenerator ServletContextListener in its web config" do
-    stage :lift do |staged_dir|
+    stage lift_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       File.exist?(web_config_file).should == true
 
@@ -47,7 +47,7 @@ describe "A Lift application with only a LiftFilter being staged will contain a 
   end
 
   it "should contain the CloudLiftServicesPropertiesGenerator ServletContextListener before the LiftFilter in its web config" do
-    stage :lift do |staged_dir|
+    stage lift_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       File.exist?(web_config_file).should == true
 
@@ -69,7 +69,7 @@ describe "A Lift application with only a LiftFilter being staged will contain a 
   end
 
   it "should not have a 'contextInitializerClasses' context-param" do
-    stage :lift do |staged_dir|
+    stage lift_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       context_param_name_node = web_config.xpath("//context-param[contains(normalize-space(param-name), normalize-space('contextInitializerClasses'))]")
@@ -78,7 +78,7 @@ describe "A Lift application with only a LiftFilter being staged will contain a 
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :lift do |staged_dir|
+    stage lift_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -93,7 +93,7 @@ describe "A Lift application with a servlet and a LiftFilter being staged will c
   end
 
   it "should contain a CloudLiftServicesPropertiesGenerator ServletContextListener in its web config" do
-    stage :lift do |staged_dir|
+    stage lift_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       File.exist?(web_config_file).should == true
 
@@ -107,7 +107,7 @@ describe "A Lift application with a servlet and a LiftFilter being staged will c
   end
 
   it "should contain the CloudLiftServicesPropertiesGenerator ServletContextListener before the servlet in its web config" do
-    stage :lift do |staged_dir|
+    stage lift_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       File.exist?(web_config_file).should == true
 
@@ -126,7 +126,7 @@ describe "A Lift application with a servlet and a LiftFilter being staged will c
   end
 
   it "should not have a 'contextInitializerClasses' context-param" do
-    stage :lift do |staged_dir|
+    stage lift_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       context_param_name_node = web_config.xpath("//context-param[contains(normalize-space(param-name), normalize-space('contextInitializerClasses'))]")
@@ -135,11 +135,24 @@ describe "A Lift application with a servlet and a LiftFilter being staged will c
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :lift do |staged_dir|
+    stage lift_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
     end
   end
 
+end
+def lift_staging_env
+  {:runtime_info => {
+     :name => "java",
+     :description => "Java 6",
+     :version => "1.6",
+     :executable => "java",
+   },
+   :framework_info => {
+     :name =>"lift",
+     :runtimes =>[{"java"=>{"default"=>true}}],
+     :detection =>[{"*.war"=>true}]
+   }}
 end

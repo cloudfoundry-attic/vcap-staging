@@ -9,7 +9,7 @@ describe "A Standalone app being staged" do
 
     describe "and using Ruby 1.8" do
       it "is packaged with a startup script" do
-        stage(:standalone,{:meta=>{:command=> "ruby app.rb"}, :runtime=> "ruby18"}) do |staged_dir|
+        stage({:framework_info => {:name => "standalone"},:meta=>{:command=> "ruby app.rb"}, :runtime_info=> ruby18_runtime}) do |staged_dir|
           start_script = File.join(staged_dir, 'startup')
           start_script.should be_executable_file
           script_body = File.read(start_script)
@@ -19,7 +19,6 @@ export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
 export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
-unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app
@@ -31,13 +30,13 @@ wait $STARTED
         end
       end
       it "installs gems" do
-        stage(:standalone,{:meta=>{:command=> "ruby app.rb"}, :runtime=> "ruby18"}) do |staged_dir|
+        stage({:framework_info => {:name => "standalone"}, :meta=>{:command=> "ruby app.rb"}, :runtime_info=> ruby18_runtime}) do |staged_dir|
           gemdir = File.join(staged_dir,'app','rubygems','ruby','1.8')
           Dir.entries(gemdir).should_not == []
         end
       end
       it "installs autoconfig gem" do
-       stage :sinatra do |staged_dir|
+       stage ({:framework_info => {:name => "standalone"}, :meta=>{:command=> "ruby app.rb"}, :runtime_info=> ruby18_runtime}) do |staged_dir|
          gemfile = File.join(staged_dir,'app','Gemfile')
          gemfile_body = File.read(gemfile)
          gemfile_body.should == <<-EXPECTED
@@ -53,7 +52,7 @@ gem "cf-autoconfig"
     end
     describe "and using Ruby 1.9" do
       it "is packaged with a startup script" do
-        stage(:standalone,{:meta=>{:command=> "ruby app.rb"}, :runtime=> "ruby19"}) do |staged_dir|
+        stage({:framework_info => {:name => "standalone"},:meta=>{:command=> "ruby app.rb"}, :runtime_info=> ruby19_runtime}) do |staged_dir|
           start_script = File.join(staged_dir, 'startup')
           start_script.should be_executable_file
           script_body = File.read(start_script)
@@ -63,7 +62,6 @@ export GEM_HOME="$PWD/app/rubygems/ruby/1.9.1"
 export GEM_PATH="$PWD/app/rubygems/ruby/1.9.1"
 export PATH="$PWD/app/rubygems/ruby/1.9.1/bin:$PATH"
 export RUBYOPT="-I$PWD/ruby  -rcfautoconfig -rstdsync"
-unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app
@@ -75,13 +73,13 @@ wait $STARTED
         end
       end
       it "installs gems" do
-        stage(:standalone,{:meta=>{:command=> "ruby app.rb"}, :runtime=> "ruby19"}) do |staged_dir|
+        stage({:framework_info => {:name => "standalone"}, :meta=>{:command=> "ruby app.rb"}, :runtime_info=> ruby19_runtime}) do |staged_dir|
           gemdir = File.join(staged_dir,'app','rubygems','ruby','1.9.1')
           Dir.entries(gemdir).should_not == []
         end
       end
       it "installs autoconfig gem" do
-       stage :sinatra do |staged_dir|
+       stage ({:framework_info => {:name => "standalone"}, :meta=>{:command=> "ruby app.rb"}, :runtime_info=> ruby19_runtime}) do |staged_dir|
          gemfile = File.join(staged_dir,'app','Gemfile')
          gemfile_body = File.read(gemfile)
          gemfile_body.should == <<-EXPECTED
@@ -104,14 +102,13 @@ gem "cf-autoconfig"
 
     describe "and using Ruby 1.8" do
       it "is packaged with a startup script" do
-        stage(:standalone,{:meta=>{:command=> "ruby hello.rb"}, :runtime=> "ruby18"}) do |staged_dir|
+        stage({:framework_info => {:name => "standalone"}, :meta=>{:command=> "ruby hello.rb"}, :runtime_info=> ruby18_runtime}) do |staged_dir|
           start_script = File.join(staged_dir, 'startup')
           start_script.should be_executable_file
           script_body = File.read(start_script)
           script_body.should == <<-EXPECTED
 #!/bin/bash
 export RUBYOPT="-rubygems -I$PWD/ruby -rstdsync"
-unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app
@@ -125,14 +122,13 @@ wait $STARTED
     end
     describe "and using Ruby 1.9" do
       it "is packaged with a startup script" do
-        stage(:standalone,{:meta=>{:command=> "ruby hello.rb"}, :runtime=> "ruby19"}) do |staged_dir|
+        stage({:framework_info => {:name => "standalone"}, :meta=>{:command=> "ruby hello.rb"}, :runtime_info=> ruby19_runtime}) do |staged_dir|
           start_script = File.join(staged_dir, 'startup')
           start_script.should be_executable_file
           script_body = File.read(start_script)
           script_body.should == <<-EXPECTED
 #!/bin/bash
 export RUBYOPT="-rubygems -I$PWD/ruby -rstdsync"
-unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app
@@ -151,7 +147,7 @@ wait $STARTED
       app_fixture :standalone_java
     end
     it "is packaged with a startup script" do
-      stage(:standalone,{:meta=>{:command=> "java $JAVA_OPTS HelloWorld"}, :runtime=> "java", :environment=>{:resources=>{:memory=>512}}}) do |staged_dir|
+      stage({:framework_info => {:name => "standalone"}, :meta=>{:command=> "java $JAVA_OPTS HelloWorld"}, :runtime_info=> {:name => "java"}, :resources=>{:memory=>512}}) do |staged_dir|
           start_script = File.join(staged_dir, 'startup')
           start_script.should be_executable_file
           script_body = File.read(start_script)
@@ -167,7 +163,7 @@ wait $STARTED
         end
     end
     it "creates a temp dir" do
-      stage(:standalone,{:meta=>{:command=> "java $JAVA_OPTS HelloWorld"}, :runtime=> "java", :environment=>{:resources=>{:memory=>512}}}) do |staged_dir|
+      stage({:framework_info => {:name => "standalone"}, :meta=>{:command=> "java $JAVA_OPTS HelloWorld"}, :runtime_info=> {:name => "java"}, :resources=>{:memory=>512}}) do |staged_dir|
           tmp_dir = File.join(staged_dir, 'temp')
           File.exists?(tmp_dir).should == true
         end
@@ -179,7 +175,7 @@ wait $STARTED
       app_fixture :standalone_python
     end
     it "is packaged with a startup script" do
-      stage(:standalone,{:meta=>{:command=> "python HelloWorld.py"}, :runtime=> "python2", :environment=>{:resources=>{:memory=>512}}}) do |staged_dir|
+      stage({:framework_info => {:name => "standalone"}, :meta=>{:command=> "python HelloWorld.py"}, :runtime_info=> {:name => "python2"}, :resources=>{:memory=>512}}) do |staged_dir|
           start_script = File.join(staged_dir, 'startup')
           start_script.should be_executable_file
           script_body = File.read(start_script)
@@ -195,4 +191,14 @@ wait $STARTED
         end
     end
   end
+end
+def ruby18_runtime
+  {:name => "ruby18",
+   :version => "1.8.7",
+   :executable => "/usr/bin/ruby"}
+end
+def ruby19_runtime
+  {:name => "ruby19",
+   :version => "1.9.2",
+   :executable => "ruby"}
 end

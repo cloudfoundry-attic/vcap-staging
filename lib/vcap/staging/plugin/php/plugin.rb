@@ -1,9 +1,6 @@
 require File.expand_path('../../apache_common/apache', __FILE__)
 
 class PhpPlugin < StagingPlugin
-  def framework
-    'php'
-  end
 
   def resource_dir
     File.join(File.dirname(__FILE__), 'resources')
@@ -42,8 +39,7 @@ class PhpPlugin < StagingPlugin
   private
 
   def startup_script
-    vars = environment_hash
-    generate_startup_script(vars) do
+    generate_startup_script do
       <<-PHPEOF
 env > env.log
 ruby resources/generate_apache_conf $VCAP_APP_PORT $HOME $VCAP_SERVICES #{application_memory}m
@@ -52,8 +48,7 @@ ruby resources/generate_apache_conf $VCAP_APP_PORT $HOME $VCAP_SERVICES #{applic
   end
 
   def stop_script
-    vars = environment_hash
-    generate_stop_script(vars)
+    generate_stop_script
   end
 
   def apache_server_root

@@ -23,7 +23,6 @@ require File.expand_path('../java_database_support', __FILE__)
 # TODO - Separate the common staging helper methods from the 'StagingPlugin' base class, for more clarity.
 # Staging plugins (at least the ones written in Ruby) are expected to subclass this. See ruby/sinatra for a simple example.
 class StagingPlugin
-  DEFAULT_MANIFEST_ROOT = File.join(File.expand_path('..', __FILE__), 'manifests')
 
   attr_accessor :source_directory, :destination_directory, :environment_json
 
@@ -31,49 +30,10 @@ class StagingPlugin
     File.expand_path('..', __FILE__)
   end
 
-  def self.manifest_root=(dir)
-    @@manifest_root = dir
-  end
-
-  def self.manifest_root
-    @@manifest_root ||= DEFAULT_MANIFEST_ROOT
-    @@manifest_root
-  end
-
-  # This is a digestable version for the outside world
-  def self.manifests_info
-    @@manifests_info ||= {}
-  end
-
-  def self.manifests
-    @@manifests ||= {}
-  end
-
   def self.platform_config
-    path = File.join(manifest_root, 'platform.yml')
-    YAML.load_file(path)
+    config_path = ENV['PLATFORM_CONFIG']
+    YAML.load_file(config_path)
   end
-
-  def self.validate_configuration!
-    config = platform_config
-    staging_cache_dir = config['cache']
-    begin
-      # NOTE - Make others as needed for other kinds of package managers.
-      FileUtils.mkdir_p File.join(staging_cache_dir, 'gems')
-      FileUtils.mkdir_p File.join(staging_cache_dir, "node_modules")
-      # TODO - Validate java runtimes as well.
-      check_ruby_runtimes
-    rescue => ex
-      puts "Staging environment validation failed: #{ex}"
-      exit 1
-    end
-  end
-
-  def self.get_ruby_version(exe)
-    get_ver  = %{-e "print RUBY_VERSION,'p',RUBY_PATCHLEVEL"}
-    `env -i PATH=#{ENV['PATH']} #{exe} #{get_ver}`
-  end
-
 
   # Transforms lowercased/underscored word into camelcase.
   #
@@ -89,179 +49,25 @@ class StagingPlugin
     uc_parts.join
   end
 
-  # Checks the existence and version of the Ruby runtimes specified
-  # by the sinatra and rails staging manifests.
-  def self.check_ruby_runtimes
-    (%w[sinatra rails3] & manifests.keys).each do |framework|
-      manifests[framework]['runtimes'].each do |hash|
-        hash.each do |name, properties|
-          exe, ver = properties['executable'], properties['version']
-          ver_pattern = Regexp.new(Regexp.quote(ver))
-          output = get_ruby_version(exe)
-          if $? == 0
-            unless output.strip =~ ver_pattern
-              raise "#{framework} runtime #{name} version was #{output.strip}, expected to match #{ver}*"
-            end
-          else
-            raise "#{framework} staging manifest has a bad runtime: #{name} (#{output.strip})"
-          end
-        end
-      end
-    end
-  end
-
-  # Generate a client side consumeable version of the manifest info
-  def self.generate_manifests_info
-    manifests.each_pair do |name, manifest|
-
-      runtimes = []
-      appservers = []
-
-      manifest['runtimes'].each do |runtime|
-        runtime.each_pair do |runtime_name, runtime_info|
-          runtimes <<  {
-            :name => runtime_name,
-            :version => runtime_info['version'],
-            :description => runtime_info['description'] }
-        end
-      end
-
-      if manifest['app_servers']
-        manifest['app_servers'].each do |appserver|
-          appserver.each_pair do |appserver_name, appserver_info|
-            appservers <<  {
-              :name => appserver_name,
-              # :version => appserver_info['version'],
-              :description => appserver_info['description'] }
-          end
-        end
-      end
-
-      m = {
-        :name => manifest['name'],
-        :runtimes => runtimes,
-        :appservers => appservers,
-        :detection => manifest['detection']
-      }
-      manifests_info[name] = m
-
-    end
-  end
-
-  def self.load_all_manifests
-    pattern = File.join(manifest_root, '*.yml')
-    Dir[pattern].each do |yaml_file|
-      next if File.basename(yaml_file) == 'platform.yml'
-      load_manifest(yaml_file)
-    end
-    generate_manifests_info
-  end
-
   def self.load_plugin_for(framework)
     framework = framework.to_s
     plugin_path = File.join(staging_root, framework, 'plugin.rb')
     require plugin_path
-    # This loads the default manifest; if a plugin gets passed an alternate
-    # manifest directory, and it finds a framework.yml file, it will replace this.
-    manifest_path = File.join(manifest_root, "#{framework}.yml")
-    load_manifest(manifest_path)
     Object.const_get("#{camelize(framework)}Plugin")
-  end
-
-  def self.load_manifest(path)
-    framework = File.basename(path, '.yml')
-    m = YAML.load_file(path)
-    unless m['disabled']
-      manifests[framework] = m
-    else
-      manifests.delete(framework)
-    end
-  rescue
-    puts "Failed to load staging manifest for #{framework} from #{path.inspect}"
-    exit 1
-  end
-
-  # This returns the staging framework names that claim to recognize the app
-  # found in the given +dir+. Order is not specified, and the caller must decide what
-  # it plans to do if multiple frameworks can be found in the given directory.
-  def self.matching_frameworks_for(dir)
-    matched = []
-    manifests.each do |name, staging_manifest|
-      rules = staging_manifest['detection']
-      if rules.all? { |rule| rule_matches_directory?(rule, dir) }
-        matched.push(name)
-      end
-    end
-    matched
-  end
-
-  def self.default_runtime_for(framework)
-    manifest = manifests[framework]
-    return nil unless manifest && manifest['runtimes']
-    manifest['runtimes'].each do |rt|
-      rt.each do |name, rt_info|
-        return name if rt_info['default']
-      end
-    end
-    return nil
   end
 
   # Exits the process with a nonzero status if ARGV does not contain valid
   # staging args. If you call this in-process in an app server you deserve your fate.
   def self.validate_arguments!(*args)
-    source, dest, env, manifest_dir, uid, gid = args
+    source, dest, env, uid, gid = args
     argfail!(args) unless source && dest && env
     argfail!(args) unless File.directory?(File.expand_path(source))
     argfail!(args) unless File.directory?(File.expand_path(dest))
-    if manifest_dir
-      argfail!(args) unless File.directory?(File.expand_path(manifest_dir))
-    end
   end
 
   def self.argfail!(args)
     puts "Invalid arguments for staging: #{args.inspect}"
     exit 1
-  end
-
-  def self.rule_matches_directory?(rule, dir)
-    dir = File.expand_path(dir)
-    results = rule.map do |glob, what|
-      full_glob = File.join(dir, glob)
-      case what
-      when String
-        pattern = Regexp.new(what)
-        scan_files_for_regexp(dir, full_glob, pattern).any?
-      when true
-        scan_files(dir, full_glob).any?
-      else
-        scan_files(dir, full_glob).empty?
-      end
-    end
-    results.all?
-  end
-
-  def self.scan_files(base_dir, glob)
-    found = []
-    base_dir << '/' unless base_dir.end_with?('/')
-    Dir[glob].each do |full_path|
-      matched = block_given? ? yield(full_path) : true
-      if matched
-        relative_path = full_path.dup
-        relative_path[base_dir] = ''
-        found.push(relative_path)
-      end
-    end
-    found
-  end
-
-  def self.scan_files_for_regexp(base_dir, glob, pattern)
-    scan_files(base_dir, glob) do |path|
-      matched = false
-      File.open(path, 'rb') do |f|
-        matched = true if f.read.match(pattern)
-      end
-      matched
-    end
   end
 
   # Loads arguments from a file and instantiates a new instance.
@@ -278,14 +84,12 @@ class StagingPlugin
     validate_arguments!(config[:source_dir],
                         config[:dest_dir],
                         config[:environment],
-                        config[:manifest_dir],
                         uid,
                         gid)
 
     self.new(config[:source_dir],
              config[:dest_dir],
              config[:environment],
-             config[:manifest_dir],
              uid,
              gid)
   end
@@ -295,32 +99,24 @@ class StagingPlugin
   # B) Make sure you call 'super'
   #
   # a good subclass impl would look like:
-  # def initialize(source, dest, env = nil, manifest_dir = nil)
+  # def initialize(source, dest, env = nil)
   #   super
   #   whatever_you_have_planned
   #
   # NB: Environment is not what you think it is (better named app_properties?). It is a hash of:
   #   :services  => [service_binding_hash]  # See ServiceBinding#for_staging in cloud_controller/app/models/service_binding.rb
-  #   :framework => framework_name
-  #   :runtime   => runtime_name
+  #   :framework => {framework properties from manifest}
+  #   :runtime   => {runtime properties}
   #   :resources => {                       # See App#resource_requirements or App#limits (they return identical hashes)
   #     :memory => mem limits in MB         # in cloud_controller/app/models/app.rb
   #     :disk   => disk limits in MB
   #     :fds    => fd limits
   #   }
   # end
-  def initialize(source_directory, destination_directory, environment = {}, manifest_dir = nil, uid=nil, gid=nil)
+  def initialize(source_directory, destination_directory, environment = {}, uid=nil, gid=nil)
     @source_directory = File.expand_path(source_directory)
     @destination_directory = File.expand_path(destination_directory)
     @environment = environment
-    @manifest_dir = nil
-    if manifest_dir
-      # This is kind of weird, but this maintains  the previous behavior. (Except we directly set StagingPlugin.manifest_root,
-      # instead of setting it indirectly by setting ENV['STAGING_CONFIG_DIR']
-      @manifest_dir = File.expand_path(manifest_dir)
-      StagingPlugin.manifest_root = @manifest_dir
-    end
-
     # Drop privs before staging
     # res == real, effective, saved
     @staging_gid = gid.to_i if gid
@@ -344,7 +140,7 @@ class StagingPlugin
   end
 
   def framework
-    raise NotImplementedError, "subclasses must implement a 'framework' method that returns a string"
+    environment[:framework_info]
   end
 
   def stage_application
@@ -356,11 +152,11 @@ class StagingPlugin
   end
 
   def staging_command
-    runtime['staging']
+    runtime[:staging]
   end
 
   def start_command
-    app_server['executable']
+    raise NotImplementedError, "subclasses must implement a 'start_command' method that returns a string"
   end
 
   def stop_command
@@ -384,48 +180,9 @@ class StagingPlugin
     end
   end
 
-  def manifest
-    @manifest ||= begin
-                    if @manifest_dir
-                      path = File.join(@manifest_dir, "#{framework}.yml")
-                      if File.exists?(path)
-                        StagingPlugin.load_manifest(path)
-                      else
-                        StagingPlugin.manifests[framework]
-                      end
-                    else
-                      StagingPlugin.manifests[framework]
-                    end
-                  end
-  end
-
-  # The specified :runtime, or the default.
+  # The specified :runtime
   def runtime
-    find_in_manifest(:runtimes, :runtime, 'a runtime')
-  end
-
-  # The specified :server, or the default.
-  def app_server
-    find_in_manifest(:app_servers, :server, 'an app server')
-  end
-
-  # Looks in the specified +environment+ key. If it is set, looks
-  # for a matching entry in the staging manifest and returns it.
-  # If not found in the environment, the default is returned.
-  # The process will exit if an unknown entry is given in the environment.
-  def find_in_manifest(manifest_key, environment_key, what)
-    choices = manifest[manifest_key.to_s]
-    if entry_name = environment[environment_key.to_sym]
-      choices.each do |hash|
-        hash.each do |name, attrs|
-          return attrs if name.to_s == entry_name
-        end
-      end
-      puts "Unable to find #{what} matching #{entry_name.inspect} in #{choices.inspect}"
-      exit 1
-    else
-      select_default_from choices
-    end
+    environment[:runtime_info]
   end
 
   # Environment variables specified on the app supersede those
@@ -433,24 +190,6 @@ class StagingPlugin
   # would allow a user to run their Rails app in development mode, etc.
   def environment_hash
     @env_variables ||= build_environment_hash
-  end
-
-  # Given a list of 'runtimes' or 'app_servers', pick out the
-  # one that was marked as default. If none are so marked,
-  # the first option listed is returned.
-  def select_default_from(declarations)
-    listed = Array(declarations)
-    chosen = nil
-    listed.each do |hash|
-      hash.each do |name, properties|
-        if properties['default']
-          chosen = properties
-        else
-          chosen ||= properties
-        end
-      end
-    end
-    chosen
   end
 
   # Overridden in subclasses when the framework needs to start from a different directory.
@@ -533,7 +272,7 @@ echo "$STARTED" >> ../run.pid
   end
 
   def detection_rules
-    manifest['detection']
+    environment[:framework_info][:detection]
   end
 
   def bound_services
@@ -551,7 +290,7 @@ echo "$STARTED" >> ../run.pid
       rule.each do |glob, pattern|
         next unless String === pattern
         full_glob = File.join(app_dir, glob)
-        files = StagingPlugin.scan_files_for_regexp(app_dir, full_glob, pattern)
+        files = scan_files_for_regexp(app_dir, full_glob, pattern)
         matching.concat(files)
       end
     end
@@ -577,32 +316,61 @@ echo "$STARTED" >> ../run.pid
   # with the app's runtime.
   def build_environment_hash
     ret = {}
-    (runtime['environment'] || {}).each do |key,val|
+    (runtime[:environment] || {}).each do |key,val|
       ret[key.to_s.upcase] = val
     end
     ret
   end
 
-  # If the manifest specifies a workable ruby, returns that.
+  # If the runtime info specifies a workable ruby, returns that.
   # Otherwise, returns the path to the ruby we were started with.
   def ruby
     @ruby ||= \
     begin
-      rb = runtime['executable']
-      pattern = Regexp.new(Regexp.quote(runtime['version']))
-      output = StagingPlugin.get_ruby_version(rb)
+      rb = runtime[:executable]
+      pattern = Regexp.new(Regexp.quote(runtime[:version]))
+      output = get_ruby_version(rb)
       if $? == 0 && output.strip =~ pattern
         rb
       elsif "#{RUBY_VERSION}p#{RUBY_PATCHLEVEL}" =~ pattern
         current_ruby
       else
-        puts "No suitable runtime found. Needs version matching #{runtime['version']}"
+        puts "No suitable runtime found. Needs version matching #{runtime[:version]}"
         exit 1
       end
     end
   end
 
+  def get_ruby_version(exe)
+    get_ver  = %{-e "print RUBY_VERSION,'p',RUBY_PATCHLEVEL"}
+    `env -i PATH=#{ENV['PATH']} #{exe} #{get_ver}`
+  end
+
   def insight_agent
     StagingPlugin.platform_config['insight_agent']
+  end
+
+  def scan_files(base_dir, glob)
+    found = []
+    base_dir << '/' unless base_dir.end_with?('/')
+    Dir[glob].each do |full_path|
+      matched = block_given? ? yield(full_path) : true
+      if matched
+        relative_path = full_path.dup
+        relative_path[base_dir] = ''
+        found.push(relative_path)
+      end
+    end
+    found
+  end
+
+  def scan_files_for_regexp(base_dir, glob, pattern)
+    scan_files(base_dir, glob) do |path|
+      matched = false
+      File.open(path, 'rb') do |f|
+        matched = true if f.read.match(pattern)
+      end
+      matched
+    end
   end
 end

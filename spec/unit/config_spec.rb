@@ -37,8 +37,10 @@ describe StagingPlugin::Config do
         'source_dir'  => 'test',
         'dest_dir'    => 'test',
         'environment' => {
-          'framework' => 'sinatra',
-          'runtime'   => 'ruby',
+          'framework_info' => {'name' => 'sinatra'},
+          'runtime_info'   => {'name' => 'ruby18'},
+          'runtime'        => "ruby18",
+          'framework'      => "sinatra",
           'resources' => {
             'memory'  => 128,
             'disk'    => 2048,
@@ -58,6 +60,49 @@ describe StagingPlugin::Config do
       end
 
       parsed_cfg[:environment][:services][0].should == svc_expected
+    end
+
+    it 'should not require runtime and framework names' do
+      svc = {
+        'label' => 'hello',
+        'tags'  => ['tag1', 'tag2'],
+        'name'  => 'my_test_svc',
+        'credentials' => {
+          'hostname' => 'localhost',
+          'port'     => 12345,
+          'password' => 'sekret',
+          'name'     => 'test',
+        },
+        'options' => {},
+        'plan' => 'free',
+        'plan_option' => 'zazzle',
+      }
+
+      config = {
+        'source_dir'  => 'test',
+        'dest_dir'    => 'test',
+        'environment' => {
+          'framework_info' => {'name' => 'sinatra'},
+          'runtime_info'   => {'name' => 'ruby18'},
+          'resources' => {
+            'memory'  => 128,
+            'disk'    => 2048,
+            'fds'     => 1024,
+          },
+          'services'  => [svc],
+        }
+      }
+
+      tf = Tempfile.new('test_config')
+      begin
+        StagingPlugin::Config.to_file(config, tf.path)
+        parsed_cfg = StagingPlugin::Config.from_file(tf.path)
+      ensure
+        tf.close
+        tf.unlink
+      end
+
+      parsed_cfg[:environment][:framework_info].should == {:name => 'sinatra'}
     end
   end
 end

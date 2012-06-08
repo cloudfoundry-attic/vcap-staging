@@ -6,7 +6,7 @@ describe "A simple Sinatra app being staged" do
   end
 
   it "is packaged with a startup script" do
-    stage :sinatra do |staged_dir|
+    stage sinatra_staging_env do |staged_dir|
       executable = '%VCAP_LOCAL_RUNTIME%'
       start_script = File.join(staged_dir, 'startup')
       start_script.should be_executable_file
@@ -15,7 +15,6 @@ describe "A simple Sinatra app being staged" do
 #!/bin/bash
 export RACK_ENV="${RACK_ENV:-production}"
 export RUBYOPT="-rubygems -I$PWD/ruby -rstdsync"
-unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app
@@ -28,7 +27,7 @@ wait $STARTED
   end
 
   it "contains a log indicating disabled autoconfig" do
-    stage :sinatra do |staged_dir|
+    stage sinatra_staging_env do |staged_dir|
       executable = '%VCAP_LOCAL_RUNTIME%'
       staging_log = File.join(staged_dir, 'logs','staging.log')
       log_body = File.read(staging_log)
@@ -42,7 +41,7 @@ wait $STARTED
     end
 
     it "is packaged with a startup script" do
-      stage :sinatra do |staged_dir|
+      stage sinatra_staging_env do |staged_dir|
         executable = '%VCAP_LOCAL_RUNTIME%'
         start_script = File.join(staged_dir, 'startup')
         start_script.should be_executable_file
@@ -54,7 +53,6 @@ export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RACK_ENV="${RACK_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rstdsync"
-unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app
@@ -67,7 +65,7 @@ wait $STARTED
     end
 
    it "installs autoconfig gem" do
-     stage :sinatra do |staged_dir|
+     stage sinatra_staging_env do |staged_dir|
        gemfile = File.join(staged_dir,'app','Gemfile')
        gemfile_body = File.read(gemfile)
        gemfile_body.should == <<-EXPECTED
@@ -91,4 +89,18 @@ gem "cf-autoconfig"
      end
    end
   end
+end
+def sinatra_staging_env
+  {:runtime_info => {
+     :name => "ruby18",
+     :version => "1.8.7",
+     :description => "Ruby 1.8.7",
+     :executable => "/usr/bin/ruby",
+     :environment => {"bundle_gemfile"=>nil}
+   },
+   :framework_info => {
+     :name => "sinatra",
+     :runtimes => [{"ruby18"=>{"default"=>true}}, {"ruby19"=>{"default"=>false}}],
+     :detection =>[{"*.rb"=>"require\\s+'sinatra'|require\\s+\"sinatra\""}, {"config.ru"=>false}, {"config/environment.rb"=>false}]
+   }}
 end

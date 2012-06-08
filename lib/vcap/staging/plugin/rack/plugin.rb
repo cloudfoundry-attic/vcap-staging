@@ -2,10 +2,6 @@ class RackPlugin < StagingPlugin
   include GemfileSupport
   include RubyAutoconfig
 
-  def framework
-    'rack'
-  end
-
   def stage_application
     Dir.chdir(destination_directory) do
       create_app_directories
@@ -33,7 +29,7 @@ class RackPlugin < StagingPlugin
 
   private
   def startup_script
-    vars = environment_hash
+    vars = {}
     if uses_bundler?
       vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:$PATH"
       vars['GEM_PATH'] = vars['GEM_HOME'] = "$PWD/app/rubygems/ruby/#{library_version}"
@@ -49,8 +45,7 @@ class RackPlugin < StagingPlugin
   end
 
   def stop_script
-    vars = environment_hash
-    generate_stop_script(vars)
+    generate_stop_script
   end
 
   def plugin_specific_startup

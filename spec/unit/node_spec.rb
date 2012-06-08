@@ -7,14 +7,14 @@ describe "A simple Node.js app being staged" do
   end
 
   it "is packaged with a startup script" do
-    stage :node do |staged_dir|
+    stage node_staging_env do |staged_dir|
       start_script = File.join(staged_dir, "startup")
       start_script.should be_executable_file
     end
   end
 
   it "generates an auto-config script by default" do
-    stage :node do |staged_dir|
+    stage node_staging_env do |staged_dir|
       File.exists?(File.join(staged_dir, "app", "autoconfig.js")).should be_true
       start_script = File.join(staged_dir, "startup")
       start_script.should be_executable_file
@@ -46,7 +46,7 @@ describe "A Node.js app with auto-config options being staged" do
     end
 
     it "does not generate an auto-config script" do
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         File.exists?(File.join(staged_dir, "app", "autoconfig.js")).should_not be_true
         start_script = File.join(staged_dir, "startup")
         start_script.should be_executable_file
@@ -69,7 +69,7 @@ EXPECTED
     end
 
     it "does not generate an auto-config script" do
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         File.exists?(File.join(staged_dir, "app", "autoconfig.js")).should_not be_true
         start_script = File.join(staged_dir, "startup")
         start_script.should be_executable_file
@@ -95,7 +95,7 @@ describe "A Node.js app being staged with a package.json" do
     end
 
     it "uses it for the start command" do
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         start_script = File.join(staged_dir, "startup")
         start_script.should be_executable_file
         autoconfig_script = File.join(staged_dir, "app", "autoconfig.js")
@@ -115,7 +115,7 @@ EXPECTED
     end
 
     it "uses it for the start command" do
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         start_script = File.join(staged_dir, "startup")
         start_script.should be_executable_file
         script_body = File.read(start_script)
@@ -144,7 +144,7 @@ EXPECTED
       app_fixture :node_package_no_exec
     end
     it "uses it for the start command with executable prepended" do
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         start_script = File.join(staged_dir, "startup")
         start_script.should be_executable_file
         autoconfig_script = File.join(staged_dir, "app", "autoconfig.js")
@@ -165,7 +165,7 @@ EXPECTED
 
     it "fails and lets the exception propagate" do
       proc {
-        stage :node do |staged_dir|
+        stage node_staging_env do |staged_dir|
           start_script = File.join(staged_dir, "startup")
           start_script.should be_executable_file
           autoconfig_script = File.join(staged_dir, "app", "autoconfig.js")
@@ -186,7 +186,7 @@ EXPECTED
     end
 
     it "falls back onto normal detection" do
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         start_script = File.join(staged_dir, 'startup')
         start_script.should be_executable_file
         autoconfig_script = File.join(staged_dir, "app", "autoconfig.js")
@@ -204,13 +204,13 @@ end
 describe "A Node.js app with dependencies being staged" do
 
   def node_config
-    runtime_staging_config("node", "node")
+    node_staging_env[:runtime_info]
   end
 
   # check if node manifest has specified path to npm
   def pending_unless_npm_provided(runtime)
-    unless node_config["npm"]
-      pending "npm config was not provided in manifest"
+    unless node_config[:npm]
+      pending "npm config was not provided"
     end
   end
 
@@ -231,7 +231,7 @@ describe "A Node.js app with dependencies being staged" do
     end
 
     it "does not overwrite user's module" do
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         pending_unless_npm_provided("node")
         patched_file = File.join(staged_dir, "app", "node_modules", "colors", "patched.js")
         File.exists?(patched_file).should be_true
@@ -245,7 +245,7 @@ describe "A Node.js app with dependencies being staged" do
     end
 
     it "does not overwrite user's module" do
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         pending_unless_npm_provided("node")
         patched_file = File.join(staged_dir, "app", "node_modules", "colors", "patched.js")
         File.exists?(patched_file).should be_true
@@ -259,7 +259,7 @@ describe "A Node.js app with dependencies being staged" do
     end
 
     it "module will be installed with version specified in shrinkwrap" do
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         pending_unless_npm_provided("node")
         package_dir = File.join(staged_dir, "app", "node_modules", "colors")
         File.exists?(package_dir).should be_true
@@ -275,7 +275,7 @@ describe "A Node.js app with dependencies being staged" do
     end
 
     it "module will be overwritten with version specified in shrinkwrap" do
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         pending_unless_npm_provided("node")
         package_dir = File.join(staged_dir, "app", "node_modules", "colors")
         patched_file = File.join(package_dir, "patched.js")
@@ -291,7 +291,7 @@ describe "A Node.js app with dependencies being staged" do
       pending "this test depends on the previous" unless File.exists?(cached_package)
       patched_cache_file = File.join(cached_package, "cached.js")
       FileUtils.touch(patched_cache_file)
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         pending_unless_npm_provided("node")
         package_dir = File.join(staged_dir, "app", "node_modules", "colors")
         cached_file = File.join(package_dir, "cached.js")
@@ -306,7 +306,7 @@ describe "A Node.js app with dependencies being staged" do
     end
 
     it "module will be rebuild" do
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         pending_unless_npm_provided("node")
         package_dir = File.join(staged_dir, "app", "node_modules", "bcrypt")
         built_package = File.join(package_dir, "build", "Release", "bcrypt_lib.node")
@@ -321,7 +321,7 @@ describe "A Node.js app with dependencies being staged" do
     end
 
     it "install modules according to tree" do
-      stage :node do |staged_dir|
+      stage node_staging_env do |staged_dir|
         pending_unless_npm_provided("node")
         app_level = File.join(staged_dir, "app", "node_modules")
         colors = File.join(app_level, "colors")
@@ -343,4 +343,18 @@ describe "A Node.js app with dependencies being staged" do
       end
     end
   end
+end
+
+def node_staging_env
+  {:runtime_info => {
+     :name => "node",
+     :version => "0.4.12",
+     :description => "Node.js",
+     :executable => "node"
+   },
+   :framework_info => {
+     :name =>"node",
+     :runtimes =>[{"node"=>{"default"=>true}}, {"node06"=>{"default"=>false}}],
+     :detection =>[{"*.js"=>"."}]
+   }}
 end
