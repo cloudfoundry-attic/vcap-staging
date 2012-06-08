@@ -1,0 +1,17 @@
+---
+name: "standalone"
+runtimes:
+  - python2
+  - java
+  - node
+  - node06
+  - erlangR14B02
+  - php
+  - ruby18:
+      environment:
+        bundle_gemfile:
+  - ruby19:
+      environment:
+        bundle_gemfile:
+
+# vim: filetype=yaml
