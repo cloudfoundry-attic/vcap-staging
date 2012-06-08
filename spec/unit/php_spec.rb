@@ -6,7 +6,7 @@ describe "A PHP application being staged" do
   end
 
   it "is packaged with a startup script" do
-    stage :php do |staged_dir|
+    stage php_staging_env do |staged_dir|
       executable = '%VCAP_LOCAL_RUNTIME%'
       start_script = File.join(staged_dir, 'startup')
       start_script.should be_executable_file
@@ -27,8 +27,7 @@ wait $STARTED
   end
 
   it "requests the specified amount of memory from PHP" do
-    environment = { :resources => {:memory => 256} }
-    stage(:php, environment) do |staged_dir|
+    stage(php_staging_env({:memory => 256})) do |staged_dir|
       start_script = File.join(staged_dir, 'startup')
       start_script.should be_executable_file
       script_body = File.read(start_script)
@@ -44,4 +43,19 @@ wait $STARTED
       EXPECTED
     end
   end
+end
+
+def php_staging_env(resources={})
+  {:runtime_info => {
+     :name => "php",
+     :description => "PHP 5",
+     :version => "5.3",
+     :executable => "php"
+   },
+   :framework_info => {
+     :name =>"php",
+     :runtimes =>[{"php"=>{"default"=>true}}],
+     :detection =>[{"*.php"=>true}]
+   },
+   :resources => resources}
 end

@@ -46,7 +46,7 @@ module GemfileSupport
   end
 
   def library_version
-    environment[:runtime] == "ruby19" ? "1.9.1" : "1.8"
+    runtime[:name] == "ruby19" ? "1.9.1" : "1.8"
   end
 
   def bundle_without

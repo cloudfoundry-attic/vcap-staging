@@ -9,7 +9,7 @@ describe "A Spring application being staged" do
   end
 
   it "is packaged with a startup script" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       executable = '%VCAP_LOCAL_RUNTIME%'
       start_script = File.join(staged_dir, 'startup')
       start_script.should be_executable_file
@@ -45,8 +45,7 @@ wait $STARTED
   end
 
   it "requests the specified amount of memory from the JVM" do
-    environment = { :resources => {:memory => 256} }
-    stage(:spring, environment) do |staged_dir|
+    stage(spring_staging_env([], {:memory => 256})) do |staged_dir|
       start_script = File.join(staged_dir, 'startup')
       start_script.should be_executable_file
       script_body = File.read(start_script)
@@ -94,13 +93,13 @@ describe "A Spring web application being staged without a context-param in its w
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -114,7 +113,7 @@ describe "A Spring web application being staged without a context-param in its w
   end
 
   it "should have a context-param in its web config after staging" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       File.exist?(web_config_file).should == true
 
@@ -125,7 +124,7 @@ describe "A Spring web application being staged without a context-param in its w
   end
 
   it "should have a 'contextConfigLocation' where the default application context precedes the auto-reconfiguration context" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       context_param_name_node = web_config.xpath("//context-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -146,13 +145,13 @@ describe "A Spring web application being staged without a context-param in its w
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -167,7 +166,7 @@ describe "A Spring web application being staged with a context-param but without
   end
 
   it "should have a 'contextConfigLocation' where the default application context precedes the auto-reconfiguration context" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       context_param_name_node = web_config.xpath("//context-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -188,13 +187,13 @@ describe "A Spring web application being staged with a context-param but without
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -209,7 +208,7 @@ describe "A Spring web application being staged with a context-param containing 
   end
 
   it "should have the 'foo' context precede the auto-reconfiguration context in the 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       context_param_name_node = web_config.xpath("//context-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]").first
@@ -226,7 +225,7 @@ describe "A Spring web application being staged with a context-param containing 
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
@@ -239,13 +238,13 @@ describe "A Spring web application being staged with a context-param containing 
   end
 
   it "should have the 'foo' initializer precede the auto-reconfiguration initializer 'contextInitializerClasses' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', "foo, #{CLOUD_APPLICATION_CONTEXT_INITIALIZER}"
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -260,17 +259,17 @@ describe "A Spring web application being staged without a Spring DispatcherServl
   end
 
   it "should be staged" do
-    lambda { stage(:spring){} }.should_not raise_error
+    lambda { stage(spring_staging_env){} }.should_not raise_error
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -284,7 +283,7 @@ describe "A Spring web application being staged with a Spring DispatcherServlet 
   end
 
   it "should have a init-param in its web config after staging" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       File.exist?(web_config_file).should == true
 
@@ -295,7 +294,7 @@ describe "A Spring web application being staged with a Spring DispatcherServlet 
   end
 
   it "should have a 'contextConfigLocation' that includes the auto-reconfiguration context in its init-param" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//init-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -311,13 +310,13 @@ describe "A Spring web application being staged with a Spring DispatcherServlet 
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -331,7 +330,7 @@ describe "A Spring web application being staged with a Spring DispatcherServlet 
   end
 
   it "should have a init-param in its web config after staging" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       File.exist?(web_config_file).should == true
 
@@ -342,7 +341,7 @@ describe "A Spring web application being staged with a Spring DispatcherServlet 
   end
 
   it "should have the default servlet context precede the auto-reconfiguration context in the DispatcherServlet's 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//init-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -364,13 +363,13 @@ describe "A Spring web application being staged with a Spring DispatcherServlet 
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -384,7 +383,7 @@ describe "A Spring web application being staged with a Spring DispatcherServlet 
   end
 
   it "should have the default servlet context precede the auto-reconfiguration context in the DispatcherServlet's 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//init-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -406,13 +405,13 @@ describe "A Spring web application being staged with a Spring DispatcherServlet 
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -427,7 +426,7 @@ describe "A Spring web application being staged with a Spring DispatcherServlet 
   end
 
   it "should have the 'foo' context precede the auto-reconfiguration context in the DispatcherServlet's 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//init-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -449,13 +448,13 @@ describe "A Spring web application being staged with a Spring DispatcherServlet 
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -469,7 +468,7 @@ describe "A Spring web application being staged with 2 Spring DispatcherServlet 
   end
 
   it "should have 2 init-params in its web config after staging" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       File.exist?(web_config_file).should == true
 
@@ -480,7 +479,7 @@ describe "A Spring web application being staged with 2 Spring DispatcherServlet 
   end
 
   it "the 2 init-params in its web config after staging should be valid" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       File.exist?(web_config_file).should == true
 
@@ -498,13 +497,13 @@ describe "A Spring web application being staged with 2 Spring DispatcherServlet 
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -519,7 +518,7 @@ describe "A Spring web application being staged with 2 Spring DispatcherServlets
   end
 
   it "should have the 'foo' context precede the auto-reconfiguration context in 2 the DispatcherServlet's 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_nodes = web_config.xpath("//init-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -543,13 +542,13 @@ describe "A Spring web application being staged with 2 Spring DispatcherServlets
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -563,7 +562,7 @@ describe "A Spring web application being staged using an AnnotationConfigWebAppl
   end
 
   it "should have the 'foo' context precede the AnnotationConfigWebApplicationContext in the 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//context-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -586,13 +585,13 @@ describe "A Spring web application being staged using an AnnotationConfigWebAppl
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -607,7 +606,7 @@ describe "A Spring web application being staged using an AnnotationConfigWebAppl
   end
 
   it "should have the 'foo' context precede the AnnotationConfigWebApplicationContext in the 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//context-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -630,7 +629,7 @@ describe "A Spring web application being staged using an AnnotationConfigWebAppl
   end
 
   it "should have the 'bar' context precede the AnnotationConfigWebApplicationContext in the DispatcherServlet's 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//init-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -653,13 +652,13 @@ describe "A Spring web application being staged using an AnnotationConfigWebAppl
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -674,7 +673,7 @@ describe "A Spring web application being staged using a namespace and an Annotat
   end
 
   it "should have the 'foo' context precede the AnnotationConfigWebApplicationContext in the 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//xmlns:context-param[contains(normalize-space(xmlns:param-name), normalize-space('contextConfigLocation'))]")
@@ -697,7 +696,7 @@ describe "A Spring web application being staged using a namespace and an Annotat
   end
 
   it "should have the 'bar' context precede the AnnotationConfigWebApplicationContext in the DispatcherServlet's 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//xmlns:init-param[contains(normalize-space(xmlns:param-name), normalize-space('contextConfigLocation'))]")
@@ -720,13 +719,13 @@ describe "A Spring web application being staged using a namespace and an Annotat
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER, "xmlns:"
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -741,7 +740,7 @@ describe "A Spring web application being staged using an AnnotationConfigWebAppl
   end
 
   it "should have the 'foo' context precede the AnnotationConfigWebApplicationContext in the 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//context-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -764,7 +763,7 @@ describe "A Spring web application being staged using an AnnotationConfigWebAppl
   end
 
   it "should have a init-param in its web config after staging" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       File.exist?(web_config_file).should == true
 
@@ -775,7 +774,7 @@ describe "A Spring web application being staged using an AnnotationConfigWebAppl
   end
 
   it "should have the default servlet context precede the auto-reconfiguration context in the DispatcherServlet's 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//init-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -797,13 +796,13 @@ describe "A Spring web application being staged using an AnnotationConfigWebAppl
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -818,7 +817,7 @@ describe "A Spring web application being staged with a context-param but without
   end
 
   it "should have a 'contextConfigLocation' where the default application context precedes the auto-reconfiguration context" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       context_param_name_node = web_config.xpath("//context-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -839,7 +838,7 @@ describe "A Spring web application being staged with a context-param but without
   end
 
   it "should have the 'bar' context precede the AnnotationConfigWebApplicationContext in the DispatcherServlet's 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//init-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -862,13 +861,13 @@ describe "A Spring web application being staged with a context-param but without
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -883,7 +882,7 @@ describe "A Spring web application being staged using an AnnotationConfigWebAppl
   end
 
   it "should have the 'bar' context precede the AnnotationConfigWebApplicationContext in the DispatcherServlet's 'contextConfigLocation' param-value" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       web_config_file = File.join(staged_dir, 'tomcat/webapps/ROOT/WEB-INF/web.xml')
       web_config = Nokogiri::XML(open(web_config_file))
       init_param_name_node = web_config.xpath("//init-param[contains(normalize-space(param-name), normalize-space('contextConfigLocation'))]")
@@ -906,13 +905,13 @@ describe "A Spring web application being staged using an AnnotationConfigWebAppl
   end
 
   it "should have a 'contextInitializerClasses' context-param with only the CloudApplicationContextInitializer" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       assert_context_param staged_dir, 'contextInitializerClasses', CLOUD_APPLICATION_CONTEXT_INITIALIZER
     end
   end
 
   it "should have the auto reconfiguration jar in the webapp lib path" do
-    stage :spring do |staged_dir|
+    stage spring_staging_env do |staged_dir|
       auto_reconfig_jar_relative_path = "tomcat/webapps/ROOT/WEB-INF/lib/#{AUTOSTAGING_JAR}"
       auto_reconfiguration_jar_path = File.join(staged_dir, auto_reconfig_jar_relative_path)
       File.exist?(auto_reconfiguration_jar_path).should == true
@@ -932,4 +931,20 @@ def assert_context_param staged_dir, param_name, param_value, prefix=""
 
   context_param_value = context_param_value_node.first.content
   context_param_value.should == param_value
+end
+
+def spring_staging_env(services=[], resources={})
+  {:runtime_info => {
+     :name => "java",
+     :description => "Java 6",
+     :version => "1.6",
+     :executable => "java",
+   },
+   :framework_info => {
+     :name =>"spring",
+     :runtimes =>[{"java"=>{"default"=>true}}],
+     :detection =>[{"*.war"=>true}]
+   },
+   :services => services,
+   :resources => resources}
 end
