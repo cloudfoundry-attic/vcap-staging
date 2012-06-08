@@ -3,7 +3,7 @@ require 'vcap/staging/plugin/common'
 require File.expand_path('../support/custom_matchers', __FILE__)
 require File.expand_path('../support/staging_spec_helpers', __FILE__)
 
-MANIFEST_DIR = File.expand_path('../../lib/vcap/staging/plugin/manifests', __FILE__)
+MANIFEST_DIR = File.expand_path('../support/manifests', __FILE__)
 
 # Created as needed, removed at the end of the spec run.
 # Allows us to override staging paths.
