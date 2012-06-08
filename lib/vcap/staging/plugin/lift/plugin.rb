@@ -9,10 +9,6 @@ class LiftPlugin < JavaWebPlugin
   CF_LIFT_PROPERTIES_GENERATOR_CLASS =
     'org.cloudfoundry.reconfiguration.CloudLiftServicesPropertiesGenerator';
 
-  def framework
-    'lift'
-  end
-
   def autostaging_template
     nil
   end

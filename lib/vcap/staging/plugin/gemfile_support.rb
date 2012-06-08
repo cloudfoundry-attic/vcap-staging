@@ -27,6 +27,7 @@ module GemfileSupport
 
     safe_env << " LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8"
     base_dir = StagingPlugin.platform_config["cache"]
+    FileUtils.mkdir_p File.join(base_dir, 'gems')
 
     app_dir  = File.join(destination_directory, 'app')
     ruby_cmd = "env -i #{safe_env} #{ruby}"
@@ -44,7 +45,7 @@ module GemfileSupport
   end
 
   def library_version
-    environment[:runtime] == "ruby19" ? "1.9.1" : "1.8"
+    runtime[:name] == "ruby19" ? "1.9.1" : "1.8"
   end
 
   # Can we expect to run this app on Rack?

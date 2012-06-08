@@ -3,12 +3,6 @@ require File.expand_path("../npm_support/npm_support", __FILE__)
 class NodePlugin < StagingPlugin
   include NpmSupport
 
-  # TODO - Is there a way to avoid this without some kind of 'register' callback?
-  # e.g. StagingPlugin.register("sinatra", __FILE__)
-  def framework
-    "node"
-  end
-
   def stage_application
     Dir.chdir(destination_directory) do
       create_app_directories
@@ -29,13 +23,11 @@ class NodePlugin < StagingPlugin
   private
 
   def startup_script
-    vars = environment_hash
-    generate_startup_script(vars)
+    generate_startup_script
   end
 
   def stop_script
-    vars = environment_hash
-    generate_stop_script(vars)
+    generate_stop_script
   end
 
   def read_configs

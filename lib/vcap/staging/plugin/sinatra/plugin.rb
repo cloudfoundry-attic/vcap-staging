@@ -2,10 +2,6 @@ class SinatraPlugin < StagingPlugin
   include GemfileSupport
   include RubyAutoconfig
 
-  def framework
-    'sinatra'
-  end
-
   def resource_dir
     File.join(File.dirname(__FILE__), 'resources')
   end
@@ -36,7 +32,7 @@ class SinatraPlugin < StagingPlugin
 
   private
   def startup_script
-    vars = environment_hash
+    vars = {}
     if uses_bundler?
       vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:$PATH"
       vars['GEM_PATH'] = vars['GEM_HOME'] = "$PWD/app/rubygems/ruby/#{library_version}"
@@ -52,8 +48,7 @@ class SinatraPlugin < StagingPlugin
   end
 
   def stop_script
-    vars = environment_hash
-    generate_stop_script(vars)
+    generate_stop_script
   end
 
   def plugin_specific_startup

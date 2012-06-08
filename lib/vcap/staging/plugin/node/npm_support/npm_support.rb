@@ -18,22 +18,23 @@ module NpmSupport
 
   def compile_node_modules
     # npm provided?
-    return unless runtime["npm"]
+    return unless runtime[:npm]
 
     @dependencies = get_dependencies
     return unless should_install_packages?
 
-    @npm_helper = NpmHelper.new(runtime["executable"], runtime["version"], runtime["npm"],
+    @npm_helper = NpmHelper.new(runtime[:executable], runtime[:version], runtime[:npm],
                                 @secure_uid, @secure_gid)
     return unless @npm_helper.npm_version
 
     @app_dir = File.expand_path(File.join(destination_directory, "app"))
 
     cache_base_dir = StagingPlugin.platform_config["cache"]
+    FileUtils.mkdir_p File.join(cache_base_dir, "node_modules")
     cache_dir  = File.join(cache_base_dir, "node_modules", library_version)
     @cache = NpmCache.new(cache_dir, logger)
 
-    logger.info("Installing dependencies. Node version #{runtime["version"]}")
+    logger.info("Installing dependencies. Node version #{runtime[:version]}")
     install_packages(@dependencies, @app_dir)
   end
 
@@ -67,7 +68,7 @@ module NpmSupport
   end
 
   def library_version
-    case environment[:runtime]
+    case runtime[:name]
     when "node08"
       "08"
     when "node06"

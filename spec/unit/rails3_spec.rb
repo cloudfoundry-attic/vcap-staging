@@ -9,7 +9,7 @@ describe "A Rails 3 application being staged" do
   end
 
   it "is packaged with a startup script" do
-    stage :rails3 do |staged_dir|
+    stage rails_staging_env do |staged_dir|
       executable = '%VCAP_LOCAL_RUNTIME%'
       start_script = File.join(staged_dir, 'startup')
       start_script.should be_executable_file
@@ -23,7 +23,6 @@ export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -rstdsync"
-unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
@@ -46,7 +45,7 @@ wait $STARTED
   end
 
   it "generates an auto-config script" do
-     stage :rails3 do |staged_dir|
+     stage rails_staging_env do |staged_dir|
        auto_stage_script = File.join(staged_dir,'app','config','initializers','01-autoconfig.rb')
        script_body = File.read(auto_stage_script)
        script_body.should == <<-EXPECTED
@@ -56,7 +55,7 @@ require 'cfautoconfig'
   end
 
   it "installs autoconfig gem" do
-     stage :rails3 do |staged_dir|
+     stage rails_staging_env do |staged_dir|
        gemfile = File.join(staged_dir,'app','Gemfile')
        gemfile_body = File.read(gemfile)
        gemfile_body.should == <<-EXPECTED
@@ -75,7 +74,7 @@ gem "cf-autoconfig"
     end
 
     it "is started with `rails server thin`" do
-      stage :rails3 do |staged_dir|
+      stage rails_staging_env do |staged_dir|
         executable = '%VCAP_LOCAL_RUNTIME%'
         start_script = File.join(staged_dir, 'startup')
         script_body = File.read(start_script)
@@ -88,7 +87,6 @@ export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -rstdsync"
-unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
@@ -112,7 +110,7 @@ wait $STARTED
   end
 
   it "is packaged with the appropriate Rails plugin" do
-      stage :rails3 do |staged_dir|
+      stage rails_staging_env do |staged_dir|
         plugin_dir = staged_dir.join('app', 'vendor', 'plugins')
         plugin_dir.join('serve_static_assets').should be_directory
         plugin_dir.join('serve_static_assets', 'init.rb').should be_readable
@@ -120,7 +118,7 @@ wait $STARTED
     end
 
   it "receives the rails console" do
-    stage :rails3 do |staged_dir|
+    stage rails_staging_env do |staged_dir|
       plugin_dir = staged_dir.join('app', 'cf-rails-console')
       plugin_dir.should be_directory
       access_file = staged_dir.join('app', 'cf-rails-console','.consoleaccess')
@@ -137,7 +135,7 @@ wait $STARTED
 
     it "installs the development and production gems" do
       pending
-      stage :rails3 do |staged_dir|
+      stage rails_staging_env do |staged_dir|
         start_script = staged_dir.join('startup')
         start_script.should be_executable_file
         script_body = File.read(start_script)
@@ -153,7 +151,7 @@ wait $STARTED
     end
 
     it "generates a start script that includes db:migrate" do
-      stage :rails3 do |staged_dir|
+      stage rails_staging_env do |staged_dir|
         executable = '%VCAP_LOCAL_RUNTIME%'
         start_script = File.join(staged_dir, 'startup')
         script_body = File.read(start_script)
@@ -165,7 +163,6 @@ export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -rstdsync"
-unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
@@ -194,7 +191,7 @@ wait $STARTED
     end
 
     it "generates a start script that does not include db:migrate" do
-      stage :rails3 do |staged_dir|
+      stage rails_staging_env do |staged_dir|
         executable = '%VCAP_LOCAL_RUNTIME%'
         start_script = File.join(staged_dir, 'startup')
         script_body = File.read(start_script)
@@ -206,7 +203,6 @@ export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -rstdsync"
-unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
@@ -231,7 +227,7 @@ wait $STARTED
     end
 
     it "generates a start script that includes db:migrate" do
-      stage :rails3 do |staged_dir|
+      stage rails_staging_env do |staged_dir|
         executable = '%VCAP_LOCAL_RUNTIME%'
         start_script = File.join(staged_dir, 'startup')
         start_script.should be_executable_file
@@ -245,7 +241,6 @@ export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -rstdsync"
-unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
@@ -274,8 +269,8 @@ wait $STARTED
     end
 
     it "is auto-reconfigured with DB settings" do
-      stage(:rails3,{:services=>[{:label=>"postgresql-9.0",
-        :credentials=>{:hostname=>"myhost", :user=>"testuser", :port=>345, :password=>"test", :name=>"mydb"}}]}) do |staged_dir|
+      stage(rails_staging_env([{:label=>"postgresql-9.0",
+        :credentials=>{:hostname=>"myhost", :user=>"testuser", :port=>345, :password=>"test", :name=>"mydb"}}])) do |staged_dir|
         env = staged_dir.join('app', 'config', 'database.yml')
         db_settings = YAML.load_file(env)
         db_settings['production'].should == {'adapter' => 'postgresql', 'encoding' => 'utf8', 'pool' => 5,
@@ -287,10 +282,10 @@ wait $STARTED
     end
 
     it "is auto-reconfigured with DB settings when there are 2 services, one named for env" do
-      stage(:rails3,{:services=>[{:label=>"postgresql-9.0",
+      stage(rails_staging_env([{:label=>"postgresql-9.0",
         :name=> "myservice", :credentials=>{:hostname=>"thehost", :user=>"auser", :port=>34567, :password=>"testa", :name=>"mydb23"}},
         {:label=>"postgresql-9.0", :name=>"mydb-production",
-        :credentials=>{:hostname=>"myhost", :user=>"testuser", :port=>345, :password=>"test", :name=>"mydb"}}]}) do |staged_dir|
+        :credentials=>{:hostname=>"myhost", :user=>"testuser", :port=>345, :password=>"test", :name=>"mydb"}}])) do |staged_dir|
         env = staged_dir.join('app', 'config', 'database.yml')
         db_settings = YAML.load_file(env)
         db_settings['production'].should == {'adapter' => 'postgresql', 'encoding' => 'utf8', 'pool' => 5,
@@ -299,10 +294,10 @@ wait $STARTED
     end
 
     it "is auto-reconfigured with DB settings when there are 2 services, one named with 'prod'" do
-      stage(:rails3,{:services=>[{:label=>"postgresql-9.0",
+      stage(rails_staging_env([{:label=>"postgresql-9.0",
         :name=> "myservice", :credentials=>{:hostname=>"thehost", :user=>"auser", :port=>34567, :password=>"testa", :name=>"mydb23"}},
         {:label=>"postgresql-9.0", :name=>"mydb-prod",
-        :credentials=>{:hostname=>"myhost", :user=>"testuser", :port=>345, :password=>"test", :name=>"mydb"}}]}) do |staged_dir|
+        :credentials=>{:hostname=>"myhost", :user=>"testuser", :port=>345, :password=>"test", :name=>"mydb"}}])) do |staged_dir|
         env = staged_dir.join('app', 'config', 'database.yml')
         db_settings = YAML.load_file(env)
         db_settings['production'].should == {'adapter' => 'postgresql', 'encoding' => 'utf8', 'pool' => 5,
@@ -311,10 +306,10 @@ wait $STARTED
     end
 
     it "is not auto-reconfigured when there are 2 services not named prod" do
-      lambda {stage(:rails3,{:services=>[{:label=>"postgresql-9.0",
+      lambda {stage(rails_staging_env([{:label=>"postgresql-9.0",
         :name=> "myservice", :credentials=>{:hostname=>"thehost", :user=>"auser", :port=>34567, :password=>"testa", :name=>"mydb23"}},
         {:label=>"postgresql-9.0", :name=>"mydbservice",
-        :credentials=>{:hostname=>"myhost", :user=>"testuser", :port=>345, :password=>"test", :name=>"mydb"}}]})}.should raise_error SystemExit
+        :credentials=>{:hostname=>"myhost", :user=>"testuser", :port=>345, :password=>"test", :name=>"mydb"}}]))}.should raise_error SystemExit
     end
   end
 
@@ -324,8 +319,8 @@ wait $STARTED
      end
 
      it 'is auto-reconfigured with DB settings when service present' do
-       stage(:rails3,{:services=>[{:label=>"postgresql-9.0",
-        :credentials=>{:hostname=>"myhost", :user=>"testuser", :port=>345, :password=>"test", :name=>"mydb"}}]}) do |staged_dir|
+       stage(rails_staging_env([{:label=>"postgresql-9.0",
+        :credentials=>{:hostname=>"myhost", :user=>"testuser", :port=>345, :password=>"test", :name=>"mydb"}}])) do |staged_dir|
         env = staged_dir.join('app', 'config', 'database.yml')
         db_settings = YAML.load_file(env)
         db_settings['production'].should == {'adapter' => 'postgresql', 'encoding' => 'utf8', 'pool' => 5,
@@ -334,7 +329,7 @@ wait $STARTED
     end
 
     it 'is does not fail staging during autoconfig with no services' do
-       stage(:rails3) do |staged_dir|
+       stage rails_staging_env do |staged_dir|
          executable = '%VCAP_LOCAL_RUNTIME%'
          start_script = File.join(staged_dir, 'startup')
          start_script.should be_executable_file
@@ -348,7 +343,6 @@ export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -rstdsync"
-unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
@@ -370,4 +364,18 @@ wait $STARTED
       end
     end
   end
+end
+def rails_staging_env(services=[])
+  {:runtime => {
+     :name => "ruby18",
+     :version => "1.8.7",
+     :description => "Ruby 1.8.7",
+     :executable => "/usr/bin/ruby",
+     :environment => {"bundle_gemfile"=>nil}
+   },
+   :framework => {
+     :name => "rails3",
+     :runtimes => [{"ruby18"=>{"default"=>true}}, {"ruby19"=>{"default"=>false}}],
+     :detection => [{"config/application.rb"=>true}, {"config/environment.rb"=>true}]
+   }, :services => services}
 end

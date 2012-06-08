@@ -37,8 +37,8 @@ describe StagingPlugin::Config do
         'source_dir'  => 'test',
         'dest_dir'    => 'test',
         'environment' => {
-          'framework' => 'sinatra',
-          'runtime'   => 'ruby',
+          'framework' => {'name' => 'sinatra'},
+          'runtime'   => {'ruby' => 'ruby18'},
           'resources' => {
             'memory'  => 128,
             'disk'    => 2048,

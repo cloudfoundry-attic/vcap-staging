@@ -6,10 +6,6 @@ class Rails3Plugin < StagingPlugin
   include RailsDatabaseSupport
   include RubyAutoconfig
 
-  def framework
-    'rails3'
-  end
-
   # PWD here is after we change to the 'app' directory.
   def start_command
     if uses_bundler?
@@ -93,11 +89,10 @@ class Rails3Plugin < StagingPlugin
   end
 
   def startup_script
-    vars = environment_hash
+    vars = {}
     # PWD here is before we change to the 'app' directory.
     if uses_bundler?
-      path = vars['PATH'] ? vars['PATH'] : "$PATH"
-      vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:#{path}"
+      vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:$PATH"
       vars['GEM_PATH'] = vars['GEM_HOME'] = "$PWD/app/rubygems/ruby/#{library_version}"
     end
     vars['RUBYOPT'] = '-I$PWD/ruby -rstdsync'
@@ -126,8 +121,7 @@ fi
   end
 
   def stop_script
-    vars = environment_hash
-    generate_stop_script(vars)
+    generate_stop_script
   end
 
   def stop_command
