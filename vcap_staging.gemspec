@@ -17,7 +17,6 @@ gemspec = Gem::Specification.new do |s|
 
   s.add_dependency('rspec')
 
-  s.add_dependency('vcap_common', '~> 1.0.8')
   s.add_dependency('uuidtools', "~> 2.1.2")
 
   s.executables  = []
