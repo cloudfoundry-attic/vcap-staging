@@ -96,8 +96,7 @@ class Rails3Plugin < StagingPlugin
     vars = environment_hash
     # PWD here is before we change to the 'app' directory.
     if uses_bundler?
-      path = vars['PATH'] ? vars['PATH'] : "$PATH"
-      vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:#{path}"
+      vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:$PATH"
       vars['GEM_PATH'] = vars['GEM_HOME'] = "$PWD/app/rubygems/ruby/#{library_version}"
     end
     vars['RUBYOPT'] = '-I$PWD/ruby -rstdsync'

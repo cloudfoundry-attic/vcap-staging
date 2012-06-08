@@ -1,0 +1,11 @@
+---
+name: "node"
+runtimes:
+  - node:
+      default: true
+  - node06:
+      default: false
+app_servers:
+detection:
+  - "*.js": '.'
+staged_services:

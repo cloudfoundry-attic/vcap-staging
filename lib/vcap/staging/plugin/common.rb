@@ -24,7 +24,6 @@ require File.expand_path('../java_database_support', __FILE__)
 # TODO - Separate the common staging helper methods from the 'StagingPlugin' base class, for more clarity.
 # Staging plugins (at least the ones written in Ruby) are expected to subclass this. See ruby/sinatra for a simple example.
 class StagingPlugin
-  DEFAULT_MANIFEST_ROOT = File.join(File.expand_path('..', __FILE__), 'manifests')
 
   attr_accessor :source_directory, :destination_directory, :environment_json
 
@@ -33,11 +32,14 @@ class StagingPlugin
   end
 
   def self.manifest_root=(dir)
+    if dir.to_s.empty?
+      puts "StagingPlugin.manifest_root must be set to a non-empty value"
+      exit 1
+    end
     @@manifest_root = dir
   end
 
   def self.manifest_root
-    @@manifest_root ||= DEFAULT_MANIFEST_ROOT
     @@manifest_root
   end
 
@@ -50,7 +52,34 @@ class StagingPlugin
     @@manifests ||= {}
   end
 
+  def self.framework_ids
+    @@manifests.keys
+  end
+
+  def self.runtime(runtime_name)
+    runtime = runtimes[runtime_name]
+    runtime['name'] = runtime_name if runtime
+    runtime
+  end
+
+  def self.runtimes
+    @@runtimes ||= load_runtimes
+  end
+
+  # This is a digestable version for the outside world
+  def self.runtimes_info
+    @@runtime_info ||= generate_runtime_info
+  end
+
+  def self.runtime_ids
+    runtimes.keys
+  end
+
   def self.platform_config
+    unless manifest_root
+      puts "StagingPlugin.manifest_root must be set to a non-empty value"
+      exit 1
+    end
     path = File.join(manifest_root, 'platform.yml')
     YAML.load_file(path)
   end
@@ -149,10 +178,43 @@ class StagingPlugin
     end
   end
 
+  def self.generate_runtime_info
+    runtime_info = {}
+    runtimes.each_pair do |runtime_name, runtime_values|
+      runtime_info[runtime_name] = {
+        :version => runtime_values['version'],
+        :description => runtime_values['description'],
+        :debug_modes=> runtime_values['debug_modes'] }
+    end
+    runtime_info
+  end
+
+  def self.load_runtimes
+    unless manifest_root
+      puts "StagingPlugin.manifest_root must be set to a non-empty value"
+      exit 1
+    end
+    runtime_config_file = File.join(manifest_root,'runtimes.yml')
+    unless File.exists?(runtime_config_file)
+      puts "Unable to find runtimes.yml file at #{runtime_config_file}"
+      exit 1
+    end
+    runtimes = {}
+    runtimes_info = YAML.load_file(runtime_config_file)
+    runtimes_info.each_pair do |runtime_name, runtime_info|
+      runtimes[runtime_name] = runtime_info unless runtime_info['disabled']
+    end
+    runtimes
+  end
+
   def self.load_all_manifests
+    unless manifest_root
+      puts "StagingPlugin.manifest_root must be set to a non-empty value"
+      exit 1
+    end
     pattern = File.join(manifest_root, '*.yml')
     Dir[pattern].each do |yaml_file|
-      next if File.basename(yaml_file) == 'platform.yml'
+      next if File.basename(yaml_file) == 'platform.yml' || File.basename(yaml_file) == 'runtimes.yml'
       load_manifest(yaml_file)
     end
     generate_manifests_info
@@ -162,10 +224,6 @@ class StagingPlugin
     framework = framework.to_s
     plugin_path = File.join(staging_root, framework, 'plugin.rb')
     require plugin_path
-    # This loads the default manifest; if a plugin gets passed an alternate
-    # manifest directory, and it finds a framework.yml file, it will replace this.
-    manifest_path = File.join(manifest_root, "#{framework}.yml")
-    load_manifest(manifest_path)
     Object.const_get("#{camelize(framework)}Plugin")
   end
 
@@ -173,12 +231,21 @@ class StagingPlugin
     framework = File.basename(path, '.yml')
     m = YAML.load_file(path)
     unless m['disabled']
+      # Merge framework-specific runtime info with general runtime info
+      manifest_runtimes = []
+      m['runtimes'].each do |runtime|
+        runtime.each_pair do |runtime_name, runtime_info|
+          # If runtime is not in runtimes.yml file (or disabled), don't add to manifests
+          manifest_runtimes << {runtime_name=>(runtimes[runtime_name].merge(runtime_info))} if runtimes[runtime_name]
+        end
+      end
+      m['runtimes']=manifest_runtimes
       manifests[framework] = m
     else
       manifests.delete(framework)
     end
-  rescue
-    puts "Failed to load staging manifest for #{framework} from #{path.inspect}"
+  rescue Exception=>e
+    puts "Failed to load staging manifest for #{framework} from #{path.inspect}.  Error: #{e}"
     exit 1
   end
 
@@ -321,7 +388,9 @@ class StagingPlugin
       @manifest_dir = File.expand_path(manifest_dir)
       StagingPlugin.manifest_root = @manifest_dir
     end
-
+    # Load the associated manifest
+    manifest_path = File.join(StagingPlugin.manifest_root, "#{environment[:framework]}.yml")
+    StagingPlugin.load_manifest(manifest_path)
     # Drop privs before staging
     # res == real, effective, saved
     @staging_gid = gid.to_i if gid

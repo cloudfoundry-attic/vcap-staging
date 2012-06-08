@@ -48,8 +48,7 @@ class StandalonePlugin < StagingPlugin
 
   def ruby_startup_script vars
     if uses_bundler?
-      path = vars['PATH'] ? vars['PATH'] : "$PATH"
-      vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:#{path}"
+      vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:$PATH"
       vars['GEM_PATH'] = vars['GEM_HOME'] = "$PWD/app/rubygems/ruby/#{library_version}"
       if autoconfig_enabled?
         vars['RUBYOPT'] = "-I$PWD/ruby #{autoconfig_load_path} -rcfautoconfig -rstdsync"
