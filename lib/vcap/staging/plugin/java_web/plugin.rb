@@ -68,7 +68,7 @@ class JavaWebPlugin < StagingPlugin
   private
 
   def startup_script
-    vars = environment_hash
+    vars = {}
     vars['CATALINA_OPTS'] = configure_catalina_opts
     generate_startup_script(vars) do
       <<-JAVA
@@ -92,7 +92,6 @@ ruby resources/generate_server_xml $PORT
   end
 
   def stop_script
-    vars = environment_hash
-    generate_stop_script(vars)
+    generate_stop_script
   end
 end

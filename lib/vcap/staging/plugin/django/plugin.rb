@@ -3,10 +3,6 @@ class DjangoPlugin < StagingPlugin
 
   REQUIREMENTS = ['django', 'gunicorn']
 
-  def framework
-    'django'
-  end
-
   def stage_application
     Dir.chdir(destination_directory) do
       create_app_directories
@@ -30,15 +26,13 @@ class DjangoPlugin < StagingPlugin
   private
 
   def startup_script
-    vars = environment_hash
-    generate_startup_script(vars) do
+    generate_startup_script do
       setup_python_env(REQUIREMENTS)
     end
   end
 
   def stop_script
-    vars = environment_hash
-    generate_stop_script(vars)
+    generate_stop_script
   end
 
   def create_gunicorn_config

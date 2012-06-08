@@ -4,8 +4,7 @@ require "vcap/staging/plugin/gemfile_task"
 describe "GemfileTask" do
 
   before :each do
-    runtime_config = runtime_staging_config("sinatra", "ruby19")
-    @ruby_cmd = runtime_config["executable"]
+    @ruby_cmd = ENV["VCAP_RUNTIME_RUBY19"] || "ruby"
     @working_dir = Dir.mktmpdir
     @app_dir = File.join(@working_dir, "app")
     FileUtils.mkdir(@app_dir)
