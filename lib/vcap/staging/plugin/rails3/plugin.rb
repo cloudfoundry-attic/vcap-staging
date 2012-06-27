@@ -26,6 +26,17 @@ class Rails3Plugin < StagingPlugin
     "./rubygems/ruby/#{library_version}/bin"
   end
 
+  def migration_enabled?
+    cf_config_file =  destination_directory + '/app/config/cloudfoundry.yml'
+    if File.exists? cf_config_file
+      config = YAML.load_file(cf_config_file)
+      if config['dbmigrate'] == false
+        return false
+      end
+    end
+    true
+  end
+
   def migration_command
     if uses_bundler?
       "#{local_runtime} #{gem_bin_dir}/bundle exec #{local_runtime} #{gem_bin_dir}/rake db:migrate --trace"
@@ -93,11 +104,13 @@ class Rails3Plugin < StagingPlugin
     vars['DISABLE_AUTO_CONFIG'] = 'mysql:postgresql'
     generate_startup_script(vars) do
       cmds = ['mkdir ruby', 'echo "\$stdout.sync = true" >> ./ruby/stdsync.rb']
-      cmds << <<-MIGRATE
+      if migration_enabled?
+        cmds << <<-MIGRATE
 if [ -f "$PWD/app/config/database.yml" ] ; then
   cd app && #{migration_command} >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
 fi
-      MIGRATE
+        MIGRATE
+      end
       cmds << <<-RUBY_CONSOLE
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
