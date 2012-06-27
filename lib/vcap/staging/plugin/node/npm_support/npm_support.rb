@@ -29,13 +29,11 @@ module NpmSupport
 
     @app_dir = File.expand_path(File.join(destination_directory, "app"))
 
-    setup_logger
-
     cache_base_dir = StagingPlugin.platform_config["cache"]
     cache_dir  = File.join(cache_base_dir, "node_modules", library_version)
-    @cache = NpmCache.new(cache_dir, @logger)
+    @cache = NpmCache.new(cache_dir, logger)
 
-    @logger.info("Installing dependencies. Node version #{runtime["version"]}")
+    logger.info("Installing dependencies. Node version #{runtime["version"]}")
     install_packages(@dependencies, @app_dir)
   end
 
@@ -51,7 +49,7 @@ module NpmSupport
   def install_packages(dependencies, where)
     dependencies.each do |name, props|
       package = NpmPackage.new(name, props["version"], where, @staging_uid,
-                               @staging_gid, @npm_helper, @logger, @cache)
+                               @staging_gid, @npm_helper, logger, @cache)
       installed_dir = package.install
       if installed_dir && props["dependencies"].is_a?(Hash)
         install_packages(props["dependencies"], installed_dir)
@@ -70,14 +68,5 @@ module NpmSupport
 
   def library_version
     environment[:runtime] == "node06" ? "06" : "04"
-  end
-
-  def setup_logger
-    log_file = File.expand_path(File.join(@app_dir, "..", "logs", "staging.log"))
-    FileUtils.mkdir_p(File.dirname(log_file))
-
-    @logger = Logger.new(log_file)
-    @logger.level = ENV["DEBUG"] ? Logger::DEBUG : Logger::INFO
-    @logger.formatter = lambda { |sev, time, pname, msg| "#{msg}\n" }
   end
 end

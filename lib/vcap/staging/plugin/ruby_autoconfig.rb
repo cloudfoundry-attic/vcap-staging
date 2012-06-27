@@ -8,17 +8,20 @@ module RubyAutoconfig
   AUTO_CONFIG_GEM_DEPS = [ ['cf-runtime', '0.0.1'], ['crack', '0.3.1'] ]
 
   def autoconfig_enabled?
-    return false if not uses_bundler?
-    autoconfig = true
     cf_config_file =  destination_directory + '/app/config/cloudfoundry.yml'
     if File.exists? cf_config_file
       config = YAML.load_file(cf_config_file)
       if config['autoconfig'] == false
-        autoconfig = false
+        return false
       end
     end
+    if not uses_bundler?
+       logger.warn "Auto-reconfiguration disabled because app does not use Bundler."
+       logger.warn "Please provide a Gemfile.lock to use auto-reconfiguration."
+       return false
+    end
     #Return true if user has not explicitly opted out and they are not using cf-runtime gem
-    autoconfig && !(uses_cf_runtime?)
+    return !(uses_cf_runtime?)
   end
 
   def install_autoconfig_gem

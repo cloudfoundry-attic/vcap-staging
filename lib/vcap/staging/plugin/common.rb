@@ -328,6 +328,22 @@ class StagingPlugin
     @staging_uid = uid.to_i if uid
   end
 
+  def logger
+    @logger ||= \
+    begin
+      log_file = File.expand_path(File.join(log_dir, "staging.log"))
+      FileUtils.mkdir_p(File.dirname(log_file))
+      logger = Logger.new(log_file)
+      logger.level = ENV["DEBUG"] ? Logger::DEBUG : Logger::INFO
+      logger.formatter = lambda { |sev, time, pname, msg| "#{msg}\n" }
+      logger
+    end
+  end
+
+  def log_dir
+    File.join(destination_directory, 'logs')
+  end
+
   def framework
     raise NotImplementedError, "subclasses must implement a 'framework' method that returns a string"
   end

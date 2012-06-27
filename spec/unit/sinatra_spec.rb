@@ -28,6 +28,15 @@ wait $STARTED
     end
   end
 
+  it "contains a log indicating disabled autoconfig" do
+    stage :sinatra do |staged_dir|
+      executable = '%VCAP_LOCAL_RUNTIME%'
+      staging_log = File.join(staged_dir, 'logs','staging.log')
+      log_body = File.read(staging_log)
+      log_body.should =~ /Auto-reconfiguration disabled because app does not use Bundler./
+    end
+  end
+
   describe "when bundled" do
     before do
       app_fixture :sinatra_gemfile
