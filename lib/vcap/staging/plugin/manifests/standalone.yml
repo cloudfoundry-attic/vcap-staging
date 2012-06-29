@@ -17,6 +17,10 @@ runtimes:
       version: '0.6.8'
       description: 'Node.js'
       executable: node
+  - node08:
+      version: '0.8.2'
+      description: 'Node.js'
+      executable: node
   - erlangR14B02:
       version: 'R14B02'
       description: 'Erlang R14B02'
