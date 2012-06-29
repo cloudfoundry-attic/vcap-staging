@@ -67,6 +67,13 @@ module NpmSupport
   end
 
   def library_version
-    environment[:runtime] == "node06" ? "06" : "04"
+    case environment[:runtime]
+    when "node08"
+      "08"
+    when "node06"
+      "06"
+    else
+      "04"
+    end
   end
 end
