@@ -56,7 +56,7 @@ require 'cfautoconfig'
      end
   end
 
-it "installs autoconfig gem" do
+  it "installs autoconfig gem" do
      stage :rails3 do |staged_dir|
        gemfile = File.join(staged_dir,'app','Gemfile')
        gemfile_body = File.read(gemfile)
@@ -162,6 +162,130 @@ wait $STARTED
         script_body = File.read(start_script)
         rails = staged_dir.join('app', 'rubygems', 'ruby', '1.8', 'gems', 'rails-3.0.5')
         rails.should be_directory
+      end
+    end
+  end
+
+  describe "which enables DB migrations using the db migrate property" do
+    before do
+      app_fixture :rails3_no_assets
+    end
+
+    it "generates a start script that includes db:migrate" do
+      stage :rails3 do |staged_dir|
+        executable = '%VCAP_LOCAL_RUNTIME%'
+        start_script = File.join(staged_dir, 'startup')
+        script_body = File.read(start_script)
+        script_body.should == <<-EXPECTED
+#!/bin/bash
+export DISABLE_AUTO_CONFIG="mysql:postgresql"
+export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
+export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
+export RACK_ENV="production"
+export RAILS_ENV="production"
+export RUBYOPT="-I$PWD/ruby -rstdsync"
+unset BUNDLE_GEMFILE
+mkdir ruby
+echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+if [ -f "$PWD/app/config/database.yml" ] ; then
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
+fi
+if [ -n "$VCAP_CONSOLE_PORT" ]; then
+  cd app
+  #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
+  CONSOLE_STARTED=$!
+  echo "$CONSOLE_STARTED" >> ../console.pid
+  cd ..
+fi
+cd app
+#{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+STARTED=$!
+echo "$STARTED" >> ../run.pid
+wait $STARTED
+        EXPECTED
+      end
+    end
+  end
+
+  describe "which disables DB migrations" do
+    before do
+      app_fixture :rails3_db_migrations_disabled
+    end
+
+    it "generates a start script that does not include db:migrate" do
+      stage :rails3 do |staged_dir|
+        executable = '%VCAP_LOCAL_RUNTIME%'
+        start_script = File.join(staged_dir, 'startup')
+        script_body = File.read(start_script)
+        script_body.should == <<-EXPECTED
+#!/bin/bash
+export DISABLE_AUTO_CONFIG="mysql:postgresql"
+export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
+export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
+export RACK_ENV="production"
+export RAILS_ENV="production"
+export RUBYOPT="-I$PWD/ruby -rstdsync"
+unset BUNDLE_GEMFILE
+mkdir ruby
+echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+if [ -n "$VCAP_CONSOLE_PORT" ]; then
+  cd app
+  #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
+  CONSOLE_STARTED=$!
+  echo "$CONSOLE_STARTED" >> ../console.pid
+  cd ..
+fi
+cd app
+#{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+STARTED=$!
+echo "$STARTED" >> ../run.pid
+wait $STARTED
+        EXPECTED
+      end
+    end
+  end
+  describe "which enables DB migrations through absence of dbmigrate property" do
+    before do
+      app_fixture :rails3_nodb
+    end
+
+    it "generates a start script that includes db:migrate" do
+      stage :rails3 do |staged_dir|
+        executable = '%VCAP_LOCAL_RUNTIME%'
+        start_script = File.join(staged_dir, 'startup')
+        start_script.should be_executable_file
+        script_body = File.read(start_script)
+
+        script_body.should == <<-EXPECTED
+#!/bin/bash
+export DISABLE_AUTO_CONFIG="mysql:postgresql"
+export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
+export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
+export RACK_ENV="production"
+export RAILS_ENV="production"
+export RUBYOPT="-I$PWD/ruby -rstdsync"
+unset BUNDLE_GEMFILE
+mkdir ruby
+echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+if [ -f "$PWD/app/config/database.yml" ] ; then
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
+fi
+if [ -n "$VCAP_CONSOLE_PORT" ]; then
+  cd app
+  #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
+  CONSOLE_STARTED=$!
+  echo "$CONSOLE_STARTED" >> ../console.pid
+  cd ..
+fi
+cd app
+#{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+STARTED=$!
+echo "$STARTED" >> ../run.pid
+wait $STARTED
+        EXPECTED
       end
     end
   end
