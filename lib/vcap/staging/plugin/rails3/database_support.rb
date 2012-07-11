@@ -17,8 +17,10 @@ module RailsDatabaseSupport
   def write_database_yaml(binding)
     data = database_config_for(binding)
     conf = File.join(destination_directory, 'app', 'config', 'database.yml')
+    settings = File.exists?(conf) ? YAML.load_file(conf) : {}
+    settings['production']=data
     File.open(conf, 'w') do |fh|
-      fh.write(YAML.dump('production' => data))
+      YAML.dump(settings, fh)
     end
     binding
   end

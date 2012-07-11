@@ -55,6 +55,7 @@ module StagingSpecHelpers
                  else
                    app_source
                  end
+    env[:environment] ||= []
     stager = plugin_klass.new(source_dir, working_dir, env)
     # I still don't get why it's an array of single key hashes
     # instead of a hash of {name => attrs}
