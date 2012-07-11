@@ -44,6 +44,7 @@ class SinatraPlugin < StagingPlugin
     else
       vars['RUBYOPT'] = "-rubygems -I$PWD/ruby -rstdsync"
     end
+    vars['RACK_ENV'] = '${RACK_ENV:-production}'
     # PWD here is after we change to the 'app' directory.
     generate_startup_script(vars) do
       plugin_specific_startup

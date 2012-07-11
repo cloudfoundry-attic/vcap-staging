@@ -19,11 +19,11 @@ class RackPlugin < StagingPlugin
 
   def start_command
     if uses_bundler? && autoconfig_enabled?
-      "#{local_runtime} #{gem_bin_dir}/bundle exec #{local_runtime} -rcfautoconfig -S #{gem_bin_dir}/rackup $@ config.ru"
+      "#{local_runtime} #{gem_bin_dir}/bundle exec #{local_runtime} -rcfautoconfig -S #{gem_bin_dir}/rackup $@ config.ru -E $RACK_ENV"
     elsif uses_bundler?
-      "#{local_runtime} #{gem_bin_dir}/bundle exec #{local_runtime} -S #{gem_bin_dir}/rackup $@ config.ru"
+      "#{local_runtime} #{gem_bin_dir}/bundle exec #{local_runtime} -S #{gem_bin_dir}/rackup $@ config.ru -E $RACK_ENV"
     else
-      "#{local_runtime} -S rackup $@ config.ru"
+      "#{local_runtime} -S rackup $@ config.ru -E $RACK_ENV"
     end
   end
 
@@ -41,6 +41,7 @@ class RackPlugin < StagingPlugin
     else
       vars['RUBYOPT'] = "-rubygems -I$PWD/ruby -rstdsync"
     end
+     vars['RACK_ENV'] = '${RACK_ENV:-production}'
     # PWD here is after we change to the 'app' directory.
     generate_startup_script(vars) do
       plugin_specific_startup
