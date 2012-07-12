@@ -37,8 +37,8 @@ module GemfileSupport
     @task.install_bundler
     @task.remove_gems_cached_in_app
 
-    @rack = @task.bundles_rack?
-    @thin = @task.bundles_thin?
+    @rack = @task.bundles_gem?("rack")
+    @thin = @task.bundles_gem?("thin")
 
     write_bundle_config
   end
@@ -69,12 +69,12 @@ module GemfileSupport
     File.directory?(File.join(source_directory, 'vendor', 'bundle', library_version))
   end
 
-  def install_local_gem(gem_dir,gem_filename,gem_name,gem_version)
-    @task.install_local_gem gem_dir,gem_filename,gem_name,gem_version
+  def install_local_gem(gem_dir, gem_filename, gem_name, gem_version)
+    @task.install_local_gem(gem_dir, gem_filename, gem_name, gem_version)
   end
 
   def install_gems(gems)
-    @task.install_gems gems
+    @task.install_gems(gems)
   end
 
   # This sets a relative path to the bundle directory, so nothing is confused
