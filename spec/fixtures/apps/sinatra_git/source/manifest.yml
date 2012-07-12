@@ -1,0 +1,13 @@
+--- 
+applications: 
+  .: 
+    name: frank
+    framework: 
+      name: sinatra
+      info: 
+        mem: 128M
+        description: Sinatra Application
+        exec: ruby app.rb
+    url: ${name}.${target-base}
+    mem: 128M
+    instances: 1
