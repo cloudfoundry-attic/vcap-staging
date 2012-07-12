@@ -1,14 +1,17 @@
 require "logger"
 require "fileutils"
+require "bundler"
+require "rubygems/installer"
+require "vcap/staging/plugin/gem_cache"
 
 class GemfileTask
-
-  def initialize(app_dir, library_version, ruby_cmd, base_dir, uid=nil, gid=nil)
+  def initialize(app_dir, library_version, ruby_cmd, git_cmd, base_dir, uid=nil, gid=nil)
     @app_dir         = File.expand_path(app_dir)
     @library_version = library_version
     @cache_base_dir  = File.join(base_dir, @library_version)
 
     @ruby_cmd = ruby_cmd
+    @git_cmd = git_cmd
     @uid = uid
     @gid = gid
 
@@ -21,6 +24,8 @@ class GemfileTask
 
     @cache  = GemCache.new(File.join(@cache_base_dir, "gem_cache"))
   end
+
+  attr_reader :git_cmd
 
   def lockfile_path
     File.join(@app_dir, 'Gemfile.lock')
@@ -42,9 +47,31 @@ class GemfileTask
     @dependencies
   end
 
+  def git_gem_specs
+    return @git_gem_specs unless @git_gem_specs.nil?
+
+    parser = Bundler::LockfileParser.new(lockfile)
+
+    @git_gem_specs = parser.specs.select { |s|
+      s.source.is_a? Bundler::Source::Git
+    }.map { |s|
+      {
+        "name" => s.name,
+        "version" => s.version.version,
+        "uri" => s.source.uri,
+        "revision" => s.source.send(:revision),
+      }
+    }
+  end
+
+  def git_gems
+    git_gem_specs.map { |d| [ d["name"], d["version"] ] }
+  end
+
   # TODO - Inject EM.system-compatible control here.
   def install
-    install_gems(dependencies)
+    install_gems(dependencies - git_gems)
+    install_git_gems
   end
 
   def remove_gems_cached_in_app
@@ -150,6 +177,90 @@ class GemfileTask
         @logger.info "Adding #{gem_filename} to app..."
 
         copy_gem_to_app(installed_gem_path)
+      end
+    end
+  end
+
+  # returns a tuple of (dir, gemspec) where dir is the tree hosting the gem
+  # we also assume that the file for gemspec lives directly below dir
+  def git_checkout(tmpdir, uri, revision, gem_name)
+    `#{git_cmd} clone --quiet --no-checkout #{uri} #{tmpdir} && cd #{tmpdir} && #{git_cmd} checkout --quiet #{revision}`
+    if $?.exitstatus != 0
+      raise "Git clone failed"
+    end
+    # FIXME: logger.debug
+    @logger.debug("git revision: %s" % `cd #{tmpdir} && #{git_cmd} rev-parse HEAD`.strip)
+    Dir.glob(File.join(tmpdir, Bundler::Source::Path::DEFAULT_GLOB)).each do |file|
+      # FIXME: ideally we should spawn a new Ruby VM in a clean env
+      # but assuming gemspecs only require files from themselves
+      # clearing $LOAD_PATH seems sufficient
+      gemspec = IO.pipe do |rd, wr|
+        pid = fork do
+          rd.close
+          # duh, people are shelling out in their gemspec
+          ENV["PATH"] = "%s:%s" % [ File.dirname(git_cmd), ENV["PATH"] ]
+          $:.clear
+          gemspec = Bundler.load_gemspec(file)
+          wr.write(gemspec.to_ruby_for_cache)
+          exit!
+        end
+        wr.close
+        spec_as_ruby = rd.read
+        Process.waitpid(pid)
+        eval(spec_as_ruby)
+      end
+      if gemspec && gemspec.name == gem_name
+        # sanitizing the gemspec, removing all dynamism
+        # no more shelling out yo
+        File.open(file, "w") { |f| f.write(gemspec.to_ruby_for_cache) }
+        return [File.dirname(file), gemspec]
+      end
+    end
+    nil
+  end
+
+  # XXX: hax
+  def build_extensions(dir, gemspec)
+    klass = Class.new(Gem::Installer) do
+      def initialize(dir, gemspec)
+        @spec = gemspec
+        @gem_dir = dir
+      end
+    end
+    installer = klass.new(dir, gemspec)
+    installer.build_extensions
+  end
+
+  def git_installation_dir
+    File.join(installation_directory, 'bundler', 'gems')
+  end
+
+  def git_gem_dir(uri, revision)
+    git_scope = "%s-%s" % [ File.basename(uri, '.git'), revision[0, 12] ]
+    File.join(git_installation_dir, git_scope)
+  end
+
+  def copy_git_gem_to_app(dir, uri, revision)
+    raise ArgumentError, [dir,uri,revision].inspect unless dir && uri && revision
+    FileUtils.mkdir_p(git_installation_dir)
+    FileUtils.cp_r(dir, git_gem_dir(uri, revision), :preserve => true)
+  end
+
+  # each git gem spec is a 4-key hash: name, version, uri, revision
+  # TODO: cache compilation results
+  def install_git_gems
+    git_gem_specs.each do |s|
+      Dir.mktmpdir do |tmpdir|
+        @logger.info("checking out git repo for #{s.inspect}")
+        checkout_dir, gemspec = git_checkout(
+          tmpdir, s["uri"], s["revision"], s["name"]
+        )
+        @logger.info("loaded gemspec: #{gemspec.name}-#{gemspec.version}")
+        @logger.info("building extensions for #{gemspec.name}-#{gemspec.version}")
+        build_extensions(checkout_dir, gemspec)
+        # sanitize_gemspec(checkout_dir, gemspec)
+        @logger.info("copying git gem #{gemspec.name}-#{gemspec.version} to app")
+        copy_git_gem_to_app(checkout_dir, s["uri"], s["revision"])
       end
     end
   end

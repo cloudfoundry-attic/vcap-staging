@@ -30,8 +30,9 @@ module GemfileSupport
 
     app_dir  = File.join(destination_directory, 'app')
     ruby_cmd = "env -i #{safe_env} #{ruby}"
+    git_cmd = StagingPlugin.platform_config["git_cmd"] || `which git`.strip
 
-    @task = GemfileTask.new(app_dir, library_version, ruby_cmd, base_dir, @staging_uid, @staging_gid)
+    @task = GemfileTask.new(app_dir, library_version, ruby_cmd, git_cmd, base_dir, @staging_uid, @staging_gid)
 
     @task.install
     @task.install_bundler
