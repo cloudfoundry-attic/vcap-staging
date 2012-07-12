@@ -1,10 +1,11 @@
 require "logger"
 require "fileutils"
 require "bundler"
+require "rubygems/installer"
+require "vcap/staging/plugin/gem_cache"
 
 class GemfileTask
-
-  def initialize(app_dir, library_version, ruby_cmd, base_dir, uid=nil, gid=nil)
+  def initialize(app_dir, library_version, ruby_cmd, git_cmd, base_dir, uid=nil, gid=nil)
     @app_dir          = File.expand_path(app_dir)
     @library_version  = library_version
     @cache_base_dir   = File.join(base_dir, @library_version)
@@ -12,6 +13,7 @@ class GemfileTask
     FileUtils.mkdir_p(@blessed_gems_dir)
 
     @ruby_cmd = ruby_cmd
+    @git_cmd = git_cmd
     @uid = uid
     @gid = gid
 
@@ -25,6 +27,8 @@ class GemfileTask
     @cache = GemCache.new(File.join(@cache_base_dir, "gem_cache"))
   end
 
+  attr_reader :git_cmd
+
   def lockfile_path
     File.join(@app_dir, "Gemfile.lock")
   end
@@ -33,6 +37,12 @@ class GemfileTask
     return @locked unless @locked.nil?
     lockfile = File.read(lockfile_path)
     @locked = Bundler::LockfileParser.new(lockfile)
+  end
+
+  def git_gem_specs
+    @git_gem_specs ||= locked_dependencies.specs.select { |s|
+      s.source.is_a? Bundler::Source::Git
+    }
   end
 
   # TODO - Inject EM.system-compatible control here.
@@ -48,19 +58,26 @@ class GemfileTask
   # e.g. ['thin', '1.2.10']
   def install_gems(gems)
     gems.each do |(name, version)|
-      install_gem(name, version)
+      install_rubygems_gem(name, version)
     end
   end
 
   # Each dependency is a Bundler::Spec object
   def install_specs(specs)
     specs.each do |spec|
-      install_gem(spec.name, spec.version.version, spec.source)
+      case spec.source
+      when Bundler::Source::Rubygems
+        install_rubygems_gem(spec.name, spec.version.version)
+      when Bundler::Source::Git
+        install_git_gem(spec.name, spec.version.to_s, spec.source)
+      else
+        # TODO: log something
+      end
     end
   end
 
   def install_bundler
-    install_gem("bundler", "1.0.10")
+    install_rubygems_gem("bundler", "1.0.10")
   end
 
   def install_local_gem(gem_dir, gem_filename, gem_name, gem_version)
@@ -80,7 +97,7 @@ class GemfileTask
   end
 
   # source is Bundler::Source object, defaults to rubygems
-  def install_gem(name, version, source=nil)
+  def install_rubygems_gem(name, version)
     gem_filename = gem_filename(name, version)
 
     user_gem_path = File.join(@app_dir, "vendor", "cache", gem_filename)
@@ -88,23 +105,101 @@ class GemfileTask
     if File.exists?(user_gem_path)
       install_gem_from_path(gem_filename, user_gem_path, "user")
     else
-      if source.kind_of?(Bundler::Source::Git)
-        # Do git stuff
-        raise "Failed installing gem #{gem_filename}: git URLs are not supported"
+      blessed_gem_path = File.join(@blessed_gems_dir, gem_filename)
+      if File.exists?(blessed_gem_path)
+        install_gem_from_path(gem_filename, blessed_gem_path, "blessed")
       else
-        # assuming Rubygems
-        blessed_gem_path = File.join(@blessed_gems_dir, gem_filename)
-        if File.exists?(blessed_gem_path)
-          install_gem_from_path(gem_filename, blessed_gem_path, "blessed")
-        else
-          @logger.info("Need to fetch #{gem_filename} from RubyGems")
-          Dir.mktmpdir do |tmp_dir|
-            fetched_path = fetch_gem_from_rubygems(name, version, tmp_dir)
-            install_gem_from_path(gem_filename, fetched_path, "fetched")
-            save_blessed_gem(fetched_path)
-          end
+        @logger.info("Need to fetch #{gem_filename} from RubyGems")
+        Dir.mktmpdir do |tmp_dir|
+          fetched_path = fetch_gem_from_rubygems(name, version, tmp_dir)
+          install_gem_from_path(gem_filename, fetched_path, "fetched")
+          save_blessed_gem(fetched_path)
         end
       end
+    end
+  end
+
+  # returns a tuple of (dir, gemspec) where dir is the tree hosting the gem
+  # we also assume that the file for gemspec lives directly below dir
+  def git_checkout(tmpdir, uri, revision, gem_name)
+    `#{git_cmd} clone --quiet --no-checkout #{uri} #{tmpdir} && cd #{tmpdir} && #{git_cmd} checkout --quiet #{revision}`
+    if $?.exitstatus != 0
+      raise "Git clone failed"
+    end
+    # FIXME: logger.debug
+    @logger.debug("git revision: %s" % `cd #{tmpdir} && #{git_cmd} rev-parse HEAD`.strip)
+    Dir.glob(File.join(tmpdir, Bundler::Source::Path::DEFAULT_GLOB)).each do |file|
+      # FIXME: ideally we should spawn a new Ruby VM in a clean env
+      # but assuming gemspecs only require files from themselves
+      # clearing $LOAD_PATH seems sufficient
+      gemspec = IO.pipe do |rd, wr|
+        pid = fork do
+          rd.close
+          # duh, people are shelling out in their gemspec
+          ENV["PATH"] = "%s:%s" % [ File.dirname(git_cmd), ENV["PATH"] ]
+          $:.clear
+          gemspec = Bundler.load_gemspec(file)
+          wr.write(gemspec.to_ruby_for_cache)
+          exit!
+        end
+        wr.close
+        spec_as_ruby = rd.read
+        Process.waitpid(pid)
+        eval(spec_as_ruby)
+      end
+      if gemspec && gemspec.name == gem_name
+        # sanitizing the gemspec, removing all dynamism
+        # no more shelling out yo
+        File.open(file, "w") { |f| f.write(gemspec.to_ruby_for_cache) }
+        return [File.dirname(file), gemspec]
+      end
+    end
+    nil
+  end
+
+  # XXX: hax
+  def build_extensions(dir, gemspec)
+    klass = Class.new(Gem::Installer) do
+      def initialize(dir, gemspec)
+        @spec = gemspec
+        @gem_dir = dir
+      end
+    end
+    installer = klass.new(dir, gemspec)
+    installer.build_extensions
+  end
+
+  def git_installation_dir
+    File.join(installation_directory, 'bundler', 'gems')
+  end
+
+  def git_gem_dir(uri, revision)
+    git_scope = "%s-%s" % [ File.basename(uri, '.git'), revision[0, 12] ]
+    File.join(git_installation_dir, git_scope)
+  end
+
+  def copy_git_gem_to_app(dir, uri, revision)
+    raise ArgumentError, [dir,uri,revision].inspect unless dir && uri && revision
+    FileUtils.mkdir_p(git_installation_dir)
+    FileUtils.cp_r(dir, git_gem_dir(uri, revision), :preserve => true)
+  end
+
+  # TODO: cache compilation results
+  def install_git_gem(name, version, source)
+    uri = source.uri
+    revision = source.options["revision"]
+    Dir.mktmpdir do |tmpdir|
+      @logger.info("checking out git repo for #{name} from #{source.options}")
+      checkout_dir, gemspec = git_checkout(
+        tmpdir, uri, revision, name
+      )
+      @logger.info("loaded gemspec: #{gemspec.name}-#{gemspec.version}")
+      unless gemspec.extensions.empty?
+        @logger.info("building extensions for #{gemspec.name}-#{gemspec.version}")
+        build_extensions(checkout_dir, gemspec)
+      end
+      @logger.info("copying git gem #{gemspec.name}-#{gemspec.version} to app")
+      copy_git_gem_to_app(checkout_dir, uri, revision)
     end
   end
 
