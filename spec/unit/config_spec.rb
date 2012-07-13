@@ -3,8 +3,22 @@ require 'spec_helper'
 describe StagingPlugin::Config do
   describe '#from_file' do
     it 'should symbolize keys for service bindings' do
-      tf = Tempfile.new('test_config')
       svc = {
+        'label' => 'hello',
+        'tags'  => ['tag1', 'tag2'],
+        'name'  => 'my_test_svc',
+        'credentials' => {
+          'hostname' => 'localhost',
+          'port'     => 12345,
+          'password' => 'sekret',
+          'name'     => 'test',
+        },
+        'options' => {},
+        'plan' => 'free',
+        'plan_option' => 'zazzle',
+      }
+
+      svc_expected = {
         :label => 'hello',
         :tags  => ['tag1', 'tag2'],
         :name  => 'my_test_svc',
@@ -34,9 +48,15 @@ describe StagingPlugin::Config do
         }
       }
 
-      StagingPlugin::Config.to_file(config, tf.path)
-      parsed_cfg = StagingPlugin::Config.from_file(tf.path)
-      parsed_cfg[:environment][:services][0].should == svc
+      tf = Tempfile.new('test_config')
+      begin
+        StagingPlugin::Config.to_file(config, tf.path)
+        parsed_cfg = StagingPlugin::Config.from_file(tf.path)
+      ensure
+        tf.close
+        tf.unlink
+      end
+      parsed_cfg[:environment][:services][0].should == svc_expected
     end
   end
 end
