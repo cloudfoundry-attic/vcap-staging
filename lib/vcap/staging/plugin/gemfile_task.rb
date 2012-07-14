@@ -1,7 +1,7 @@
 require "logger"
 require "fileutils"
-require "bundler"
 require File.expand_path('../gem_cache', __FILE__)
+require File.expand_path('../git_cache', __FILE__)
 require File.expand_path('../secure_operations', __FILE__)
 
 class GemfileTask
@@ -27,6 +27,7 @@ class GemfileTask
     @logger.formatter = lambda { |sev, time, pname, msg| "#{msg}\n" }
 
     @cache = GemCache.new(File.join(@cache_base_dir, "gem_cache"))
+    @git_cache = GitCache.new(File.join(base_dir, "git_cache"))
   end
 
   def specs
@@ -68,7 +69,11 @@ class GemfileTask
 
   def install_specs(specs)
     specs.each do |spec|
-      install_gem(spec[:name], spec[:version], spec[:source])
+      if spec[:source][:type] == "Bundler::Source::Git"
+        install_git_gem(spec)
+      else
+        install_gem(spec[:name], spec[:version])
+      end
     end
   end
 
@@ -76,58 +81,99 @@ class GemfileTask
     install_gem("bundler", "1.1.3")
   end
 
-  def install_local_gem(gem_dir, gem_filename, gem_name, gem_version)
+  def install_local_gem(gem_dir, gem_filename)
     blessed_gem_path = File.join(@blessed_gems_dir, gem_filename)
     if File.exists?(blessed_gem_path)
-       install_gem_from_path(gem_filename, blessed_gem_path, "blessed")
+      installed_path = install_gem_from_path(gem_filename, blessed_gem_path, "blessed")
     else
-       local_path = File.join(gem_dir, gem_filename)
-       install_gem_from_path(gem_filename, local_path, "local")
-       save_blessed_gem(local_path)
+      local_path = File.join(gem_dir, gem_filename)
+      installed_path = install_gem_from_path(gem_filename, local_path, "local")
+      save_blessed_gem(local_path)
     end
+    copy_gem_to_app(gem_filename, installed_path, installation_directory)
   end
 
   def bundles_gem?(gem_name)
     specs.any? { |spec| spec[:name] == gem_name }
   end
 
-  # source is Bundler::Source object, defaults to rubygems
-  def install_gem(name, version, source=nil)
+  def install_gem(name, version)
     gem_filename = gem_filename(name, version)
-
     user_gem_path = File.join(@app_dir, "vendor", "cache", gem_filename)
+    installed_path = nil
 
     if File.exists?(user_gem_path)
-      install_gem_from_path(gem_filename, user_gem_path, "user")
+      installed_path = install_gem_from_path(gem_filename, user_gem_path, "user")
     else
-      if source && source[:type] == "Bundler::Source::Git"
-        # Do git stuff
-        @logger.error "Failed installing gem #{gem_filename}: git URLs are not supported"
-        raise "Failed installing gem #{gem_filename}: git URLs are not supported"
+      blessed_gem_path = File.join(@blessed_gems_dir, gem_filename)
+      if File.exists?(blessed_gem_path)
+       installed_path = install_gem_from_path(gem_filename, blessed_gem_path, "blessed")
       else
-        # TODO This will maintain old behavior of attempting to install gems with :path from blessed_gems
-        # or rubygems if not vendored.  Investigate installing from source if included in app?
-        blessed_gem_path = File.join(@blessed_gems_dir, gem_filename)
-        if File.exists?(blessed_gem_path)
-          install_gem_from_path(gem_filename, blessed_gem_path, "blessed")
-        else
-          @logger.info("Need to fetch #{gem_filename} from RubyGems")
-          Dir.mktmpdir do |tmp_dir|
-            fetched_path = fetch_gem_from_rubygems(name, version, tmp_dir)
-            install_gem_from_path(gem_filename, fetched_path, "fetched")
-            save_blessed_gem(fetched_path)
-          end
+        @logger.info("Need to fetch #{gem_filename} from RubyGems")
+        Dir.mktmpdir do |tmp_dir|
+          fetched_path = fetch_gem_from_rubygems(name, version, tmp_dir)
+          installed_path = install_gem_from_path(gem_filename, fetched_path, "fetched")
+          save_blessed_gem(fetched_path)
         end
       end
     end
+    copy_gem_to_app(gem_filename, installed_path, installation_directory)
+  end
+
+  def install_git_gem(spec)
+    gem_filename = gem_filename(spec[:name], spec[:version])
+    unless spec[:source][:revision]
+      # Revision should be always provided in lock file
+      raise "Failed installing git gem #{gem_filename}: revision is required"
+    end
+    dest = File.join(installation_directory, "bundler", "gems", spec[:source][:git_scope])
+    # Skip in case we already processed request for gem in the same git scope
+    return nil if File.exists?(dest)
+
+    # Get the source of the given revision
+    @logger.info("Need to fetch #{gem_filename} from Git source")
+    tmp_dir = create_tmpdir
+    tmp_source_path = @git_cache.get_source(spec[:source], tmp_dir)
+    gem_logname = "#{spec[:name]}-#{spec[:source][:revision]}"
+    raise "Failed fetching gem #{gem_logname} from source" unless tmp_source_path
+
+    # Build all gemspecs in source
+    gemspecs = Dir.glob(File.join(tmp_source_path, "{,*,*/*}.gemspec"))
+    # Add access to whole source to compilation user
+    secure_file(tmp_source_path)
+
+    gemspecs.each do |gemspec_path|
+      base_path = File.dirname(gemspec_path)
+      unsecure_file(base_path)
+
+      # Build gemspec
+      gem_path = build_gem(gemspec_path)
+      raise "Failed building #{File.basename(gemspec_path)}" unless gem_path
+
+      # Install gem
+      gem_full_name = File.basename(gem_path, ".gem")
+      installed_path = compile_gem(gem_path)
+      raise "Failed installing git gem #{gem_full_name}" unless installed_path
+      FileUtils.rm_f(gem_path)
+
+      # Copy installed contents back to source
+      installed_gem_dir = File.join(installed_path, "gems", gem_full_name)
+      copy_dir_contents(installed_gem_dir, base_path)
+      spec_file = File.join(installed_path, "specifications", "#{gem_full_name}.gemspec")
+      update_gemspec(gemspec_path, spec_file)
+    end
+    # Put the source in app where bundler expects to see it
+    FileUtils.rm_rf(File.join(tmp_source_path, ".git"))
+    copy_gem_to_app(gem_filename, tmp_source_path, dest)
   end
 
   private
+
   def save_blessed_gem(gem_path)
     return unless File.exists?(gem_path)
     output = `cp -n #{gem_path} #{@blessed_gems_dir} 2>&1`
     if $?.exitstatus != 0
-      @logger.debug "Failed adding #{gem_path} to #{@blessed_gems_dir}: #{output}"
+      @logger.debug "Failed adding #{gem_path} to blessed gems dir: #{output}"
     end
   end
 
@@ -142,19 +188,35 @@ class GemfileTask
 
       installed_gem_path = @cache.put(gem_path, tmp_gem_dir)
     end
-    @logger.info "Adding #{gem_filename} to app..."
-    copy_gem_to_app(installed_gem_path)
+    installed_gem_path
   end
 
-  def copy_gem_to_app(src)
+  def copy_gem_to_app(gem_filename, src, dest)
+    @logger.info("Adding #{gem_filename} to app...")
+    copy_dir_contents(src, dest)
+  end
+
+  def copy_dir_contents(src, dest)
+    unsecure_file(src)
     return unless src && File.exists?(src)
-    FileUtils.mkdir_p(installation_directory)
-    `cp -a #{src}/* #{installation_directory}`
-    @logger.error "Failed copying gem to #{installation_directory}" if $?.exitstatus != 0
+    FileUtils.mkdir_p(dest)
+    begin
+      FileUtils.copy_entry(src, dest)
+    rescue
+      @logger.error "Failed copying gem to #{dest}"
+    end
+  end
+
+  def update_gemspec(old_gemspec, new_gemspec)
+    begin
+      FileUtils.copy_entry(new_gemspec, old_gemspec)
+    rescue
+      @logger.error "Failed updating gemspec #{old_gemspec}"
+    end
   end
 
   def installation_directory
-    File.join(@app_dir, 'rubygems', 'ruby', @library_version)
+    File.join(@app_dir, "rubygems", "ruby", @library_version)
   end
 
   def fetch_gem_from_rubygems(name, version, directory)
@@ -197,13 +259,31 @@ class GemfileTask
     end
   end
 
-  # Perform a gem install from src_dir into a temporary directory
-  def compile_gem(gemfile_path)
-    # Create tempdir that will house everything
+  def create_tmpdir
     tmp_dir = Dir.mktmpdir
     at_exit do
       secure_delete(tmp_dir)
     end
+    tmp_dir
+  end
+
+  def build_gem(spec_path)
+    base = File.dirname(spec_path)
+    gem_path = nil
+    Dir.chdir(base) do
+      cmd = "#{@ruby_cmd} -S gem build '#{spec_path}' --force"
+      secure_file(base)
+      run_secure(cmd, base)
+      unsecure_file(base)
+      gem_path = Dir[File.join(base, "*.gem")].sort_by{|f| File.mtime(f)}.last
+    end
+    gem_path
+  end
+
+  # Perform a gem install from src_dir into a temporary directory
+  def compile_gem(gemfile_path)
+    # Create tempdir that will house everything
+    tmp_dir = create_tmpdir
 
     # Copy gemfile into tempdir, make sure secure user can read it
     staged_gemfile = stage_gemfile_for_install(gemfile_path, tmp_dir)
