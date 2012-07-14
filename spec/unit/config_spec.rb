@@ -56,6 +56,7 @@ describe StagingPlugin::Config do
         tf.close
         tf.unlink
       end
+
       parsed_cfg[:environment][:services][0].should == svc_expected
     end
   end
