@@ -69,8 +69,8 @@ module GemfileSupport
     File.directory?(File.join(source_directory, 'vendor', 'bundle', library_version))
   end
 
-  def install_local_gem(gem_dir, gem_filename, gem_name, gem_version)
-    @task.install_local_gem(gem_dir, gem_filename, gem_name, gem_version)
+  def install_local_gem(gem_dir, gem_filename)
+    @task.install_local_gem(gem_dir, gem_filename)
   end
 
   def install_gems(gems)

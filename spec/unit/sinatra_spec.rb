@@ -83,3 +83,16 @@ gem "cf-autoconfig"
   end
 end
 
+describe "Sinatra app with git dependencies being staged" do
+  before do
+    app_fixture :sinatra_git
+  end
+
+  it "installs git gem with native extension into right path" do
+    stage :sinatra do |staged_dir|
+      yajl = staged_dir.join("app", "rubygems", "ruby", "1.8", "bundler", "gems", "yajl-ruby-b08b3f7ffd2f")
+      yajl.should be_directory
+    end
+  end
+
+end
