@@ -2,7 +2,7 @@ require 'spec_helper'
 
 # Comprehensive unit test of Gem support
 # Note: The tests with ruby18 runtime use /usr/bin/ruby
-# by default.  Please make sure /usr/bin/gem is at least version 1.8.22 and
+# by default.  Please make sure /usr/bin/gem is at least version 1.8.24 and
 # you've done a '/usr/bin/gem install bundler -v 1.1.3'.  Alternatively you
 # can set the VCAP_RUNTIME_RUBY18 env variable to the Ruby18 installed by
 # dev_setup (or other Ruby, but same gem/bundler requirements apply)
@@ -115,8 +115,18 @@ describe 'An app being staged that contains gems with git URLs' do
     app_fixture :sinatra_giturls_gemfile
   end
 
-  it 'causes an error' do
-    lambda {stage :sinatra}.should raise_error(RuntimeError)
+  it 'installs git gems' do
+    stage(:sinatra, {:environment=>["BUNDLE_WITHOUT=development:assets"]}) do |staged_dir|
+      rubygems_dir = File.join(staged_dir, "app", "rubygems", "ruby", "1.8")
+      Dir.chdir(File.join(rubygems_dir, "gems")) do
+        Dir.glob('*').sort.should == ["bundler-1.1.3", "cf-autoconfig-0.0.4", "cf-runtime-0.0.2", "daemons-1.1.8", "diff-lcs-1.1.3",
+                                      "eventmachine-0.12.10", "execjs-1.4.0", "json-1.5.1", "json_pure-1.7.3", "membrane-0.0.1", "multi_json-1.3.6", "nats-0.4.24",
+                                      "posix-spawn-0.3.6", "rack-1.2.2", "rake-0.8.7", "rspec-2.11.0", "rspec-core-2.11.0", "rspec-expectations-2.11.1",
+                                      "rspec-mocks-2.11.1", "sinatra-1.2.3", "thin-1.3.1", "tilt-1.3", "uglifier-1.2.6", "yajl-ruby-0.8.3"]
+        File.exists?(File.join(rubygems_dir, "bundler", "gems", "vcap-common-5334b662238f")).should be true
+
+      end
+    end
   end
 end
 
@@ -125,8 +135,18 @@ describe 'An app being staged that contains gems with github references' do
     app_fixture :sinatra_github_gemfile
   end
 
-  it 'causes an error' do
-    lambda {stage :sinatra}.should raise_error(RuntimeError)
+  it 'installs git gems' do
+    stage(:sinatra, {:environment=>["BUNDLE_WITHOUT=development:assets"]}) do |staged_dir|
+      rubygems_dir = File.join(staged_dir, "app", "rubygems", "ruby", "1.8")
+      Dir.chdir(File.join(rubygems_dir, "gems")) do
+        Dir.glob('*').sort.should == ["bundler-1.1.3", "cf-autoconfig-0.0.4", "cf-runtime-0.0.2", "daemons-1.1.8", "diff-lcs-1.1.3",
+                                      "eventmachine-0.12.10", "execjs-1.4.0", "json-1.5.1", "json_pure-1.7.3", "membrane-0.0.1", "multi_json-1.3.6", "nats-0.4.24",
+                                      "posix-spawn-0.3.6", "rack-1.2.2", "rake-0.8.7", "rspec-2.11.0", "rspec-core-2.11.0", "rspec-expectations-2.11.1",
+                                      "rspec-mocks-2.11.1", "sinatra-1.2.3", "thin-1.3.1", "tilt-1.3", "uglifier-1.2.6", "yajl-ruby-0.8.3"]
+        File.exists?(File.join(rubygems_dir, "bundler", "gems", "vcap-common-5334b662238f")).should be true
+
+      end
+    end
   end
 end
 
