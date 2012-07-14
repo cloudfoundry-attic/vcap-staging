@@ -53,7 +53,7 @@ def convert_specs(specs)
   specs.each do |spec|
     converted_spec = {:name => spec.name, :version => spec.version.version, :source => {:type => spec.source.class.name}}
     if spec.source.is_a?(Bundler::Source::Git)
-      converted_spec[:source][:path] = spec.source.path
+      converted_spec[:source][:git_scope] = File.basename(spec.source.path)
       converted_spec[:source][:uri] = spec.source.options["uri"]
       converted_spec[:source][:revision] = spec.source.options["revision"]
       converted_spec[:source][:submodules] = spec.source.options["submodules"]
@@ -71,7 +71,6 @@ end
 results_file, bundle_without = ARGV
 @bundle_without = bundle_without.split(":").map {|group| group.strip} if bundle_without
 @bundle_without ||= []
-
 # Freeze the bundle so future calls to resolve method will return only locked_specs
 ENV['BUNDLE_FROZEN'] = "1"
 ENV['BUNDLE_GEMFILE'] = File.expand_path("Gemfile")
