@@ -83,6 +83,7 @@ module StagingSpecHelpers
   end
 
   def runtime_staging_config(framework, runtime)
+    StagingPlugin.load_all_manifests
     StagingPlugin.manifests[framework]["runtimes"].each do |runtime_info|
       runtime_info.each do |name, attrs|
         return attrs if name == runtime

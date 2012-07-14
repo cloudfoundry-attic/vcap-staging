@@ -25,8 +25,7 @@ module RubyAutoconfig
   end
 
   def install_autoconfig_gem
-    install_local_gem File.join(File.dirname(__FILE__), 'resources'),"#{AUTO_CONFIG_GEM_NAME}-#{AUTO_CONFIG_GEM_VERSION}.gem",
-      AUTO_CONFIG_GEM_NAME,AUTO_CONFIG_GEM_VERSION
+    install_local_gem File.join(File.dirname(__FILE__), 'resources'),"#{AUTO_CONFIG_GEM_NAME}-#{AUTO_CONFIG_GEM_VERSION}.gem"
     install_gems(AUTO_CONFIG_GEM_DEPS)
     #Add the autoconfig gem to the app's Gemfile
     File.open(destination_directory + '/app/Gemfile', 'a') {

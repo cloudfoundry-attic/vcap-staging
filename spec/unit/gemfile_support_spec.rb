@@ -110,16 +110,6 @@ BUNDLE_DISABLE_SHARED_GEMS: "1"
   end
 end
 
-describe 'An app being staged that contains gems with git URLs' do
-  before do
-    app_fixture :sinatra_giturls_gemfile
-  end
-
-  it 'causes an error' do
-    lambda {stage :sinatra}.should raise_error(RuntimeError)
-  end
-end
-
 describe 'An app being staged that contains gems with github references' do
    before do
     app_fixture :sinatra_github_gemfile
