@@ -1,10 +1,12 @@
 require "logger"
 require "fileutils"
 require "bundler"
+require File.expand_path('../gem_cache', __FILE__)
+require File.expand_path('../gem_platform', __FILE__)
 
 class GemfileTask
 
-  def initialize(app_dir, library_version, ruby_cmd, base_dir, uid=nil, gid=nil)
+  def initialize(app_dir, library_version, ruby_cmd, base_dir, options={}, uid=nil, gid=nil)
     @app_dir          = File.expand_path(app_dir)
     @library_version  = library_version
     @cache_base_dir   = File.join(base_dir, @library_version)
@@ -14,6 +16,7 @@ class GemfileTask
     @ruby_cmd = ruby_cmd
     @uid = uid
     @gid = gid
+    @options = options
 
     log_file = File.expand_path(File.join(@app_dir, "..", "logs", "staging.log"))
     FileUtils.mkdir_p(File.dirname(log_file))
@@ -29,15 +32,33 @@ class GemfileTask
     File.join(@app_dir, "Gemfile.lock")
   end
 
-  def locked_dependencies
-    return @locked unless @locked.nil?
-    lockfile = File.read(lockfile_path)
-    @locked = Bundler::LockfileParser.new(lockfile)
+  def gemfile_path
+    File.join(@app_dir, "Gemfile")
+  end
+
+  def specs
+    @specs ||= \
+    begin
+      locked_specs = bundle_definition.resolve
+      dependency_specs = locked_specs.find_all{|item| dependencies.map {|dep| dep.name}.include? item.name }
+      specs = []
+      build_spec_list(dependency_specs, locked_specs, specs)
+      specs
+    end
+  end
+
+  def dependencies
+    @dependencies ||= \
+    begin
+      groups = bundle_definition.groups.map {|g| g.to_s} - @options[:bundle_without]
+      groups.map! { |g| g.to_sym }
+      bundle_definition.dependencies.reject { |d| !matches_platform?(d)  || (d.groups & groups).empty?}
+    end
   end
 
   # TODO - Inject EM.system-compatible control here.
   def install
-    install_specs(locked_dependencies.specs)
+    install_specs(specs)
   end
 
   def remove_gems_cached_in_app
@@ -60,7 +81,7 @@ class GemfileTask
   end
 
   def install_bundler
-    install_gem("bundler", "1.0.10")
+    install_gem("bundler", "1.1.3")
   end
 
   def install_local_gem(gem_dir, gem_filename, gem_name, gem_version)
@@ -76,7 +97,7 @@ class GemfileTask
 
   # The application includes some version of the specified gem in its bundle
   def bundles_gem?(gem_name)
-    locked_dependencies.specs.any? { |spec| spec.name == gem_name }
+    specs.any? { |spec| spec.name == gem_name }
   end
 
   # source is Bundler::Source object, defaults to rubygems
@@ -90,9 +111,11 @@ class GemfileTask
     else
       if source.kind_of?(Bundler::Source::Git)
         # Do git stuff
+        @logger.error "Failed installing gem #{gem_filename}: git URLs are not supported"
         raise "Failed installing gem #{gem_filename}: git URLs are not supported"
       else
-        # assuming Rubygems
+        # TODO This will maintain old behavior of attempting to install gems with :path from blessed_gems
+        # or rubygems if not vendored.  Investigate installing from source if included in app?
         blessed_gem_path = File.join(@blessed_gems_dir, gem_filename)
         if File.exists?(blessed_gem_path)
           install_gem_from_path(gem_filename, blessed_gem_path, "blessed")
@@ -109,6 +132,44 @@ class GemfileTask
   end
 
   private
+
+  def bundle_definition
+    @bundle ||= \
+    begin
+      # Freeze the bundle so future calls to resolve method will return only locked_specs
+      ENV['BUNDLE_FROZEN'] = "1"
+      ENV['BUNDLE_GEMFILE'] = gemfile_path
+      bundle_definition = Bundler::Definition.build(gemfile_path,lockfile_path,nil)
+      bundle_definition.ensure_equivalent_gemfile_and_lockfile
+      bundle_definition
+    rescue => e
+      @logger.error "Error parsing Gemfile: #{e}"
+      raise "Error parsing Gemfile: #{e}"
+    end
+  end
+
+  # Build the list of specs to install by traversing each spec's dependencies,
+  # starting only with the included dependencies
+  def build_spec_list(dependencies, locked_specs, specs)
+    dependency_names= dependencies.map {|item| item.name}
+    locked_specs.each do |spec|
+      if dependency_names.include? spec.name
+        if !specs.include? spec
+          specs << spec
+          build_spec_list(spec.dependencies, locked_specs, specs)
+        end
+      end
+    end
+  end
+
+  # TODO we could just call dependency.include? if we were running this code with the selected
+  # version of Ruby's gems in PATH.  Since we aren't, we need to match platforms ending with Ruby
+  # version (i.e. ruby_18) against the version of Ruby selected by the user
+  def matches_platform?(dependency)
+    return false if !dependency.current_env?
+    return true if dependency.platforms.empty?
+    dependency.platforms.map {|p| GemPlatform.new(p)}.any? { |p| p.current_platform?(@library_version) }
+  end
 
   def save_blessed_gem(gem_path)
     return unless File.exists?(gem_path)

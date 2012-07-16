@@ -78,9 +78,7 @@ module StagingSpecHelpers
     end
     nil
   ensure
-    if block_given?
-      FileUtils.rm_r(working_dir) if working_dir
-    end
+    FileUtils.rm_r(working_dir) if working_dir
     FileUtils.rm_r(source_tempdir) if source_tempdir
   end
 
