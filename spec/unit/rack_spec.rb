@@ -67,6 +67,16 @@ gem "rake"
 gem "sinatra"
 gem "thin"
 gem "json"
+group :test do
+  gem "rspec"
+end
+gem "redis", :group => :development
+gem "uglifier", :groups => [:assets, :test]
+gem "sqlite3", :group => :development
+group :assets do
+  gem "thor"
+end
+
 gem "cf-autoconfig"
      EXPECTED
      end
