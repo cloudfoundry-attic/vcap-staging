@@ -2,7 +2,6 @@ require 'spec_helper'
 
 describe "A Rails 3 application being staged" do
   it "FIXME doesn't load the schema when there are no migrations"
-  it "FIXME doesn't package all the gems if production mode requires git sources"
 
   before do
     app_fixture :rails3_nodb
@@ -127,23 +126,6 @@ wait $STARTED
       config = YAML.load_file(access_file)
       config['username'].should_not be_nil
       config['password'].should_not be_nil
-    end
-  end
-
-  describe "which uses git URLs for its test dependencies" do
-    before do
-      app_fixture :rails3_gitgems
-    end
-
-    it "installs the development and production gems" do
-      pending
-      stage :rails3 do |staged_dir|
-        start_script = staged_dir.join('startup')
-        start_script.should be_executable_file
-        script_body = File.read(start_script)
-        rails = staged_dir.join('app', 'rubygems', 'ruby', '1.8', 'gems', 'rails-3.0.5')
-        rails.should be_directory
-      end
     end
   end
 
