@@ -76,10 +76,35 @@ gem "rake"
 gem "sinatra"
 gem "thin"
 gem "json"
+group :test do
+  gem "rspec"
+end
+
 gem "cf-autoconfig"
      EXPECTED
      end
    end
+
+   it "installs gems" do
+     stage :sinatra do |staged_dir|
+       Dir.chdir(File.join(staged_dir,'app', 'rubygems', 'ruby', '1.8','gems')) do
+         Dir.glob('*').sort.should == ["bundler-1.0.10","cf-autoconfig-0.0.3","cf-runtime-0.0.1","crack-0.3.1","daemons-1.1.3",
+            "eventmachine-0.12.10","json-1.5.1","rack-1.2.2", "rake-0.8.7","sinatra-1.2.3", "thin-1.2.11", "tilt-1.3"]
+       end
+     end
+   end
+
+   it "writes bundle config" do
+     stage :sinatra do |staged_dir|
+       bundle_config = File.join(staged_dir,'app','.bundle','config')
+       config_body = File.read(bundle_config)
+       config_body.should == <<-EXPECTED
+---
+BUNDLE_PATH: rubygems
+BUNDLE_DISABLE_SHARED_GEMS: "1"
+BUNDLE_WITHOUT: test
+      EXPECTED
+     end
+   end
   end
 end
-

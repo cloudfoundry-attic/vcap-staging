@@ -4,7 +4,7 @@ require "bundler"
 
 class GemfileTask
 
-  def initialize(app_dir, library_version, ruby_cmd, base_dir, uid=nil, gid=nil)
+  def initialize(app_dir, library_version, ruby_cmd, base_dir, options={}, uid=nil, gid=nil)
     @app_dir          = File.expand_path(app_dir)
     @library_version  = library_version
     @cache_base_dir   = File.join(base_dir, @library_version)
@@ -14,6 +14,7 @@ class GemfileTask
     @ruby_cmd = ruby_cmd
     @uid = uid
     @gid = gid
+    @options = options
 
     log_file = File.expand_path(File.join(@app_dir, "..", "logs", "staging.log"))
     FileUtils.mkdir_p(File.dirname(log_file))
@@ -29,15 +30,40 @@ class GemfileTask
     File.join(@app_dir, "Gemfile.lock")
   end
 
-  def locked_dependencies
-    return @locked unless @locked.nil?
-    lockfile = File.read(lockfile_path)
-    @locked = Bundler::LockfileParser.new(lockfile)
+  def gemfile_path
+    File.join(@app_dir, "Gemfile")
+  end
+
+  def specs
+    @specs ||= \
+    begin
+      # Freeze the bundle so the resolve method returns only locked specs
+      ENV['BUNDLE_FROZEN'] = "1"
+      locked_specs = bundle_definition.resolve
+      dependency_specs = locked_specs.find_all{|item| dependencies.include? item.name }
+      specs = []
+      build_spec_list(dependency_specs, locked_specs, specs)
+      specs
+    end
+  end
+
+  def dependencies
+    @dependencies ||= \
+    begin
+      included_deps = []
+      bundle_definition.dependencies.each do |dep|
+        # TODO match subset of bundle_without.
+        if dep.groups.map{|group| group.to_s} != @options[:bundle_without]
+          included_deps << dep.name
+        end
+      end
+      included_deps
+    end
   end
 
   # TODO - Inject EM.system-compatible control here.
   def install
-    install_specs(locked_dependencies.specs)
+    install_specs(specs)
   end
 
   def remove_gems_cached_in_app
@@ -76,7 +102,7 @@ class GemfileTask
 
   # The application includes some version of the specified gem in its bundle
   def bundles_gem?(gem_name)
-    locked_dependencies.specs.each { |spec| return true if spec.name == gem_name }
+    specs.each { |spec| return true if spec.name == gem_name }
     false
   end
 
@@ -110,6 +136,33 @@ class GemfileTask
   end
 
   private
+  def bundle_definition
+    @bundle ||= \
+    begin
+      bundle_definition = Bundler::Definition.build(gemfile_path,lockfile_path,nil)
+      begin
+        bundle_definition.ensure_equivalent_gemfile_and_lockfile
+      rescue Bundler::ProductionError => e
+        @logger.error "Error installing gems. Gemfile and Gemfile.lock are inconsistent: #{e}"
+        raise "Inconsistent Gemfile and Gemfile.lock"
+      end
+      bundle_definition
+    end
+  end
+
+  # Build the list of specs to install by traversing each spec's dependencies,
+  # starting only with the included dependencies
+  def build_spec_list(dependencies, locked_specs, specs)
+    dependency_names= dependencies.map {|item| item.name}
+    locked_specs.each do |spec|
+      if dependency_names.include? spec.name
+        if !specs.include? spec
+          specs << spec
+          build_spec_list(spec.dependencies, locked_specs, specs)
+        end
+      end
+    end
+  end
 
   def save_blessed_gem(gem_path)
     return unless File.exists?(gem_path)

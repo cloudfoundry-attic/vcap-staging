@@ -67,6 +67,10 @@ gem "rake"
 gem "sinatra"
 gem "thin"
 gem "json"
+group :test do
+  gem "rspec"
+end
+
 gem "cf-autoconfig"
      EXPECTED
      end
