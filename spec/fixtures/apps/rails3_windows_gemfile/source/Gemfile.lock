@@ -1,0 +1,65 @@
+GEM
+  remote: http://rubygems.org/
+  specs:
+    actionmailer (2.3.4)
+      actionpack (= 2.3.4)
+    actionpack (2.3.4)
+      activesupport (= 2.3.4)
+      rack (~> 1.0.0)
+    activerecord (2.3.4)
+      activesupport (= 2.3.4)
+    activeresource (2.3.4)
+      activesupport (= 2.3.4)
+    activesupport (2.3.4)
+    authlogic (2.1.6)
+      activesupport
+    aws-s3 (0.6.2)
+      builder
+      mime-types
+      xml-simple
+    builder (3.0.0)
+    calendar_date_select (1.16.2)
+    daemons (1.1.4)
+    desert (0.5.2)
+    eventmachine (0.12.10)
+    haml (2.0.5)
+    hpricot (0.8.4)
+    htmlentities (4.3.0)
+    icalendar (1.1.6)
+    mime-types (1.16)
+    mysql2 (0.2.6-x86-mingw32)
+    rack (1.0.1)
+    rails (2.3.4)
+      actionmailer (= 2.3.4)
+      actionpack (= 2.3.4)
+      activerecord (= 2.3.4)
+      activeresource (= 2.3.4)
+      activesupport (= 2.3.4)
+      rake (>= 0.8.3)
+    rake (0.8.3)
+    ri_cal (0.8.8)
+    searchlogic (2.4.28)
+      activerecord (>= 2.0.0)
+    thin (1.2.11-x86-mingw32)
+      daemons (>= 1.0.9)
+      eventmachine (>= 0.12.6)
+      rack (>= 1.0.0)
+    xml-simple (1.1.0)
+
+PLATFORMS
+  x86-mingw32
+
+DEPENDENCIES
+  authlogic (= 2.1.6)
+  aws-s3
+  calendar_date_select
+  desert
+  haml
+  hpricot
+  htmlentities
+  icalendar
+  mysql2 (= 0.2.6)
+  rails (= 2.3.4)
+  ri_cal
+  searchlogic
+  thin
