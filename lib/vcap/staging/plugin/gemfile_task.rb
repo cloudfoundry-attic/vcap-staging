@@ -1,6 +1,7 @@
 require "logger"
 require "fileutils"
 require "bundler"
+require File.expand_path('../gem_cache', __FILE__)
 
 class GemfileTask
 
@@ -25,21 +26,6 @@ class GemfileTask
     @cache = GemCache.new(File.join(@cache_base_dir, "gem_cache"))
   end
 
-  def lockfile_path
-    File.join(@app_dir, "Gemfile.lock")
-  end
-
-  def locked_dependencies
-    return @locked unless @locked.nil?
-    lockfile = File.read(lockfile_path)
-    @locked = Bundler::LockfileParser.new(lockfile)
-  end
-
-  # TODO - Inject EM.system-compatible control here.
-  def install
-    install_specs(locked_dependencies.specs)
-  end
-
   def remove_gems_cached_in_app
     FileUtils.rm_rf(File.join(installation_directory, "cache"))
   end
@@ -52,15 +38,14 @@ class GemfileTask
     end
   end
 
-  # Each dependency is a Bundler::Spec object
-  def install_specs(specs)
+  def install(specs)
     specs.each do |spec|
-      install_gem(spec.name, spec.version.version, spec.source)
+      install_gem(spec[:name], spec[:version], spec[:source])
     end
   end
 
   def install_bundler
-    install_gem("bundler", "1.0.10")
+    install_gem("bundler", "1.1.3")
   end
 
   def install_local_gem(gem_dir, gem_filename, gem_name, gem_version)
@@ -74,11 +59,6 @@ class GemfileTask
     end
   end
 
-  # The application includes some version of the specified gem in its bundle
-  def bundles_gem?(gem_name)
-    locked_dependencies.specs.any? { |spec| spec.name == gem_name }
-  end
-
   # source is Bundler::Source object, defaults to rubygems
   def install_gem(name, version, source=nil)
     gem_filename = gem_filename(name, version)
@@ -88,11 +68,13 @@ class GemfileTask
     if File.exists?(user_gem_path)
       install_gem_from_path(gem_filename, user_gem_path, "user")
     else
-      if source.kind_of?(Bundler::Source::Git)
+      if source && source[:type] == "Bundler::Source::Git"
         # Do git stuff
+        @logger.error "Failed installing gem #{gem_filename}: git URLs are not supported"
         raise "Failed installing gem #{gem_filename}: git URLs are not supported"
       else
-        # assuming Rubygems
+        # TODO This will maintain old behavior of attempting to install gems with :path from blessed_gems
+        # or rubygems if not vendored.  Investigate installing from source if included in app?
         blessed_gem_path = File.join(@blessed_gems_dir, gem_filename)
         if File.exists?(blessed_gem_path)
           install_gem_from_path(gem_filename, blessed_gem_path, "blessed")
@@ -108,8 +90,36 @@ class GemfileTask
     end
   end
 
-  private
+  def run_secure(cmd)
+    pid = fork
+    if pid
+      # Parent, wait for staging to complete
+      Process.waitpid(pid)
+      child_status = $?
 
+      # Kill any stray processes that the cmd may have created
+      if @uid
+        `sudo -u '##{@uid}' pkill -9 -U #{@uid} 2>&1`
+        me = `whoami`.chomp
+        `sudo chown -R #{me} #{tmp_dir}`
+        @logger.debug "Failed chowning #{tmp_dir} to #{me}" if $?.exitstatus != 0
+      end
+
+      if child_status.exitstatus != 0
+        @logger.debug("Failed executing #{cmd}")
+        return false
+      else
+        @logger.debug("Command #{cmd} was successful")
+        return true
+      end
+    else
+      close_fds
+      cmd = "cd / && sudo -u '##{@uid}' #{cmd}" if @uid
+      exec(cmd)
+    end
+  end
+
+  private
   def save_blessed_gem(gem_path)
     return unless File.exists?(gem_path)
     output = `cp -n #{gem_path} #{@blessed_gems_dir} 2>&1`
@@ -225,34 +235,7 @@ class GemfileTask
 
     @logger.debug("Doing a gem install from #{staged_gemfile} into #{gem_install_dir} as user #{@uid || 'cc'}")
     staging_cmd = "#{@ruby_cmd} -S gem install #{staged_gemfile} --local --no-rdoc --no-ri -E -w -f --ignore-dependencies --install-dir #{gem_install_dir}"
-    staging_cmd = "cd / && sudo -u '##{@uid}' #{staging_cmd}" if @uid
-
-    # Finally, do the install
-    pid = fork
-    if pid
-      # Parent, wait for staging to complete
-      Process.waitpid(pid)
-      child_status = $?
-
-      # Kill any stray processes that the gem compilation may have created
-      if @uid
-        `sudo -u '##{@uid}' pkill -9 -U #{@uid} 2>&1`
-        me = `whoami`.chomp
-        `sudo chown -R #{me} #{tmp_dir}`
-        @logger.debug "Failed chowning #{tmp_dir} to #{me}" if $?.exitstatus != 0
-      end
-
-      if child_status.exitstatus != 0
-        @logger.debug("Failed executing #{staging_cmd}")
-        nil
-      else
-        @logger.debug("Success!")
-        gem_install_dir
-      end
-    else
-      close_fds
-      exec(staging_cmd)
-    end
+    run_secure(staging_cmd) ? gem_install_dir : nil
   end
 
   def close_fds

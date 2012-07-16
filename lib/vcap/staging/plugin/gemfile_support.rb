@@ -1,3 +1,5 @@
+require File.expand_path('../gemfile_task', __FILE__)
+
 module GemfileSupport
 
   # OK, so this is our workhorse.
@@ -32,19 +34,32 @@ module GemfileSupport
     ruby_cmd = "env -i #{safe_env} #{ruby}"
 
     @task = GemfileTask.new(app_dir, library_version, ruby_cmd, base_dir, @staging_uid, @staging_gid)
-
-    @task.install
+    @specs = parse_gemfile(ruby_cmd, app_dir)
+    @task.install(@specs)
     @task.install_bundler
     @task.remove_gems_cached_in_app
 
-    @rack = @task.bundles_gem?("rack")
-    @thin = @task.bundles_gem?("thin")
-
+    @rack = bundles_gem?("rack")
+    @thin = bundles_gem?("thin")
     write_bundle_config
   end
 
   def library_version
     environment[:runtime] == "ruby19" ? "1.9.1" : "1.8"
+  end
+
+  def bundle_without
+    excluded_groups = "test"
+    without = environment[:environment].find {|env| env =~ /\ABUNDLE_WITHOUT=/} if environment[:environment]
+    if without
+      if without.split('=').last.strip == "BUNDLE_WITHOUT"
+        # Support override of default test exclusion with "BUNDLE_WITHOUT="
+        excluded_groups = nil
+      else
+        excluded_groups = without.split('=').last
+      end
+    end
+    excluded_groups
   end
 
   # Can we expect to run this app on Rack?
@@ -61,8 +76,9 @@ module GemfileSupport
     File.exists?(File.join(source_directory, 'Gemfile.lock'))
   end
 
+  # The application includes some version of the specified gem in its bundle
   def bundles_gem?(gem_name)
-    @task.bundles_gem? gem_name
+    @specs.any? { |spec| spec[:name] == gem_name }
   end
 
   def packaged_with_bundler_in_deployment_mode?
@@ -84,13 +100,28 @@ module GemfileSupport
 ---
 BUNDLE_PATH: rubygems
 BUNDLE_DISABLE_SHARED_GEMS: "1"
-BUNDLE_WITHOUT: test
-    CONFIG
+CONFIG
+    config << "BUNDLE_WITHOUT: #{bundle_without}" + "\n"  if !bundle_without.nil?
     dot_bundle = File.join(destination_directory, 'app', '.bundle')
     FileUtils.mkdir_p(dot_bundle)
     File.open(File.join(dot_bundle, 'config'), 'wb') do |config_file|
       config_file.print(config)
     end
+  end
+
+  private
+  def parse_gemfile(ruby_cmd, app_dir)
+    tmp_dir = Dir.mktmpdir
+    at_exit do
+      FileUtils.rm_rf(tmp_dir)
+    end
+    spec_file = File.join(tmp_dir,"specs")
+    spec_cmd = "#{ruby_cmd} #{File.expand_path('../gemfile_parser.rb', __FILE__)} #{File.join(app_dir, 'Gemfile')} #{File.join(app_dir, 'Gemfile.lock')} #{spec_file}"
+    spec_cmd = "#{spec_cmd} \"#{bundle_without}\"" if bundle_without
+    unless @task.run_secure(spec_cmd)
+      raise "Error resolving Gemfile"
+    end
+    YAML.load_file(spec_file)
   end
 end
 
