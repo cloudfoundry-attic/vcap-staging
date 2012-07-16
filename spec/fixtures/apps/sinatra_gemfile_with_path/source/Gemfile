@@ -12,3 +12,4 @@ gem "rubyzip", :group => :development
 group :assets do
   gem "thor"
 end
+gem "live_console", :path => "/tmp/live-console"

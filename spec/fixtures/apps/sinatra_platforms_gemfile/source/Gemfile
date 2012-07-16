@@ -12,3 +12,4 @@ gem "rubyzip", :group => :development
 group :assets do
   gem "thor"
 end
+gem "carrot", :platforms => :ruby_18
