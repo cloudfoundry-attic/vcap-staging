@@ -13,10 +13,9 @@ require 'tmpdir' # TODO - Replace this with something less absurd.
 
 require File.expand_path('../config', __FILE__)
 require File.expand_path('../gemfile_support', __FILE__)
-require File.expand_path('../gemfile_task', __FILE__)
+
 require File.expand_path('../ruby_autoconfig', __FILE__)
 require File.expand_path('../java_autoconfig', __FILE__)
-require File.expand_path('../gem_cache', __FILE__)
 
 require File.expand_path('../pip_support', __FILE__)
 require File.expand_path('../java_database_support', __FILE__)
