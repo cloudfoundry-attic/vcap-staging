@@ -31,7 +31,7 @@ module GemfileSupport
     app_dir  = File.join(destination_directory, 'app')
     ruby_cmd = "env -i #{safe_env} #{ruby}"
 
-    @task = GemfileTask.new(app_dir, library_version, ruby_cmd, base_dir, @staging_uid, @staging_gid)
+    @task = GemfileTask.new(app_dir, library_version, ruby_cmd, base_dir, {:bundle_without=>bundle_without}, @staging_uid, @staging_gid)
 
     @task.install
     @task.install_bundler
@@ -45,6 +45,13 @@ module GemfileSupport
 
   def library_version
     environment[:runtime] == "ruby19" ? "1.9.1" : "1.8"
+  end
+
+  def bundle_without
+    excluded_groups = ["test"]
+    without = environment[:environment].find {|env| env =~ /\ABUNDLE_WITHOUT=/} if environment[:environment]
+    excluded_groups = without.split('=').last.split(":").map {|group| group.strip} if without
+    excluded_groups
   end
 
   # Can we expect to run this app on Rack?
@@ -84,7 +91,7 @@ module GemfileSupport
 ---
 BUNDLE_PATH: rubygems
 BUNDLE_DISABLE_SHARED_GEMS: "1"
-BUNDLE_WITHOUT: test
+BUNDLE_WITHOUT: #{bundle_without.join(':')}
     CONFIG
     dot_bundle = File.join(destination_directory, 'app', '.bundle')
     FileUtils.mkdir_p(dot_bundle)
