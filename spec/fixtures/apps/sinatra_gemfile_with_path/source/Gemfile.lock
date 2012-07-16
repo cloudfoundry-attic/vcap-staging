@@ -1,3 +1,8 @@
+PATH
+  remote: /tmp/live-console
+  specs:
+    live_console (0.2.4)
+
 GEM
   remote: http://rubygems.org/
   specs:
@@ -38,6 +43,7 @@ PLATFORMS
 
 DEPENDENCIES
   json
+  live_console!
   rake
   redis
   rspec
