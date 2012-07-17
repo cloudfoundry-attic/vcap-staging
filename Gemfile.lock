@@ -8,6 +8,7 @@ GIT
 GIT
   remote: git://github.com/cloudfoundry/vcap-common.git
   revision: 5334b662238f14ed2ddbb80f524dcf8cdd0eaadf
+  ref: 5334b662
   specs:
     vcap_common (2.0.0)
       eventmachine
