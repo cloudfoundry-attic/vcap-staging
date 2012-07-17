@@ -1,177 +1,137 @@
 require "logger"
 require "fileutils"
+require "bundler"
 
 class GemfileTask
 
   def initialize(app_dir, library_version, ruby_cmd, base_dir, uid=nil, gid=nil)
-    @app_dir         = File.expand_path(app_dir)
-    @library_version = library_version
-    @cache_base_dir  = File.join(base_dir, @library_version)
+    @app_dir          = File.expand_path(app_dir)
+    @library_version  = library_version
+    @cache_base_dir   = File.join(base_dir, @library_version)
+    @blessed_gems_dir = File.join(@cache_base_dir, "blessed_gems")
+    FileUtils.mkdir_p(@blessed_gems_dir)
 
     @ruby_cmd = ruby_cmd
     @uid = uid
     @gid = gid
 
-    log_file = File.expand_path(File.join(@app_dir, '..', 'logs', 'staging.log'))
+    log_file = File.expand_path(File.join(@app_dir, "..", "logs", "staging.log"))
     FileUtils.mkdir_p(File.dirname(log_file))
 
     @logger = Logger.new(log_file)
     @logger.level = ENV["DEBUG"] ? Logger::DEBUG : Logger::INFO
     @logger.formatter = lambda { |sev, time, pname, msg| "#{msg}\n" }
 
-    @cache  = GemCache.new(File.join(@cache_base_dir, "gem_cache"))
+    @cache = GemCache.new(File.join(@cache_base_dir, "gem_cache"))
   end
 
   def lockfile_path
-    File.join(@app_dir, 'Gemfile.lock')
+    File.join(@app_dir, "Gemfile.lock")
   end
 
-  def lockfile
-    File.read(lockfile_path)
-  end
-
-  # Returns an array of [gemname, version] pairs.
-  def dependencies
-    return @dependencies unless @dependencies.nil?
-    @dependencies = [ ]
-    lockfile.each_line do |line|
-      if line =~ /^\s{4}([-\w_.0-9]+)\s*\((.*)\)/
-        @dependencies << [$1, $2]
-      end
-    end
-    @dependencies
+  def locked_dependencies
+    return @locked unless @locked.nil?
+    lockfile = File.read(lockfile_path)
+    @locked = Bundler::LockfileParser.new(lockfile)
   end
 
   # TODO - Inject EM.system-compatible control here.
   def install
-    install_gems(dependencies)
+    install_specs(locked_dependencies.specs)
   end
 
   def remove_gems_cached_in_app
     FileUtils.rm_rf(File.join(installation_directory, "cache"))
   end
 
-  def install_bundler
-    install_gems([ ['bundler', '1.0.10'] ])
-  end
-
-  def install_local_gem(gem_dir,gem_filename,gem_name,gem_version)
-    blessed_gems_dir = File.join(@cache_base_dir, "blessed_gems")
-
-    if File.exists?(File.join(blessed_gems_dir, gem_filename))
-       install_gems([ [gem_name, gem_version] ])
-    else
-       install_from_local_dir(gem_dir, gem_filename)
-    end
-  end
-
-  # The application includes some version of Thin in its bundle.
-  def bundles_thin?
-    dependencies.assoc('thin')
-  end
-
- #The application includes some version of the specified gem in its bundle
- def bundles_gem?(gem_name)
-    dependencies.assoc(gem_name)
- end
-
-  # The application includes some version of Rack in its bundle.
-  def bundles_rack?
-    dependencies.assoc('rack')
-  end
-
   # Each dependency is a gem [name, version] pair;
   # e.g. ['thin', '1.2.10']
   def install_gems(gems)
-    missing = [ ]
-
-    blessed_gems_dir = File.join(@cache_base_dir, "blessed_gems")
-    FileUtils.mkdir_p(blessed_gems_dir)
-
     gems.each do |(name, version)|
-      gem_filename = "%s-%s.gem" % [ name, version ]
-
-      user_gem_path    = File.join(@app_dir, "vendor", "cache", gem_filename)
-      blessed_gem_path = File.join(blessed_gems_dir, gem_filename)
-
-      if File.exists?(user_gem_path)
-        installed_gem_path = @cache.get(user_gem_path)
-        unless installed_gem_path
-          @logger.debug "Installing user gem: #{user_gem_path}"
-
-          tmp_gem_dir = install_gem(user_gem_path)
-          raise "Failed installing #{gem_filename}" unless tmp_gem_dir
-
-          installed_gem_path = @cache.put(user_gem_path, tmp_gem_dir)
-        end
-        @logger.info "Adding #{gem_filename} to app..."
-        copy_gem_to_app(installed_gem_path)
-
-      elsif File.exists?(blessed_gem_path)
-        installed_gem_path = @cache.get(blessed_gem_path)
-        unless installed_gem_path
-          @logger.debug "Installing blessed gem: #{blessed_gem_path}"
-
-          tmp_gem_dir = install_gem(blessed_gem_path)
-          raise "Failed installing #{gem_filename}" unless tmp_gem_dir
-
-          installed_gem_path = @cache.put(blessed_gem_path, tmp_gem_dir)
-        end
-        @logger.info "Adding #{gem_filename} to app..."
-        copy_gem_to_app(installed_gem_path)
-
-      else
-        @logger.info("Need to fetch #{gem_filename} from RubyGems")
-        missing << [ name, version ]
-      end
+      install_gem(name, version)
     end
+  end
 
-    return if missing.empty?
+  # Each dependency is a Bundler::Spec object
+  def install_specs(specs)
+    specs.each do |spec|
+      install_gem(spec.name, spec.version.version, spec.source)
+    end
+  end
 
-    Dir.mktmpdir do |tmp_dir|
-      @logger.info("Fetching missing gems from RubyGems")
-      unless fetch_gems(missing, tmp_dir)
-        raise "Failed fetching missing gems from RubyGems"
-      end
+  def install_bundler
+    install_gem("bundler", "1.0.10")
+  end
 
-      missing.each do |(name, version)|
-        gem_filename = "%s-%s.gem" % [ name, version ]
-        gem_path     = File.join(tmp_dir, gem_filename)
+  def install_local_gem(gem_dir, gem_filename, gem_name, gem_version)
+    blessed_gem_path = File.join(@blessed_gems_dir, gem_filename)
+    if File.exists?(blessed_gem_path)
+       install_gem_from_path(gem_filename, blessed_gem_path, "blessed")
+    else
+       local_path = File.join(gem_dir, gem_filename)
+       install_gem_from_path(gem_filename, local_path, "local")
+       save_blessed_gem(local_path)
+    end
+  end
 
-        @logger.debug "Installing downloaded gem: #{gem_path}"
-        tmp_gem_dir = install_gem(gem_path)
-        raise "Failed installing #{gem_filename}" unless tmp_gem_dir
+  # The application includes some version of the specified gem in its bundle
+  def bundles_gem?(gem_name)
+    locked_dependencies.specs.any? { |spec| spec.name == gem_name }
+  end
 
-        installed_gem_path = @cache.put(gem_path, tmp_gem_dir)
-        output = `cp -n #{gem_path} #{blessed_gems_dir} 2>&1`
-        if $?.exitstatus != 0
-          @logger.debug "Failed adding #{gem_path} to #{blessed_gems_dir}: #{output}"
+  # source is Bundler::Source object, defaults to rubygems
+  def install_gem(name, version, source=nil)
+    gem_filename = gem_filename(name, version)
+
+    user_gem_path = File.join(@app_dir, "vendor", "cache", gem_filename)
+
+    if File.exists?(user_gem_path)
+      install_gem_from_path(gem_filename, user_gem_path, "user")
+    else
+      if source.kind_of?(Bundler::Source::Git)
+        # Do git stuff
+        raise "Failed installing gem #{gem_filename}: git URLs are not supported"
+      else
+        # assuming Rubygems
+        blessed_gem_path = File.join(@blessed_gems_dir, gem_filename)
+        if File.exists?(blessed_gem_path)
+          install_gem_from_path(gem_filename, blessed_gem_path, "blessed")
+        else
+          @logger.info("Need to fetch #{gem_filename} from RubyGems")
+          Dir.mktmpdir do |tmp_dir|
+            fetched_path = fetch_gem_from_rubygems(name, version, tmp_dir)
+            install_gem_from_path(gem_filename, fetched_path, "fetched")
+            save_blessed_gem(fetched_path)
+          end
         end
-        @logger.info "Adding #{gem_filename} to app..."
-
-        copy_gem_to_app(installed_gem_path)
       end
     end
   end
 
   private
 
-  def install_from_local_dir(local_dir,gem_filename)
-    blessed_gems_dir = File.join(@cache_base_dir, "blessed_gems")
-    gem_path     = File.join(local_dir, gem_filename)
-    @logger.debug "Installing downloaded gem: #{gem_path}"
-    tmp_gem_dir = install_gem(gem_path)
-    raise "Failed installing #{gem_filename}" unless tmp_gem_dir
-
-    installed_gem_path = @cache.put(gem_path, tmp_gem_dir)
-    output = `cp -n #{gem_path} #{blessed_gems_dir} 2>&1`
+  def save_blessed_gem(gem_path)
+    return unless File.exists?(gem_path)
+    output = `cp -n #{gem_path} #{@blessed_gems_dir} 2>&1`
     if $?.exitstatus != 0
-      @logger.debug "Failed adding #{gem_path} to #{blessed_gems_dir}: #{output}"
+      @logger.debug "Failed adding #{gem_path} to #{@blessed_gems_dir}: #{output}"
+    end
+  end
+
+  def install_gem_from_path(gem_filename, gem_path, type)
+    return unless File.exists?(gem_path)
+    installed_gem_path = @cache.get(gem_path)
+    unless installed_gem_path
+      @logger.debug "Installing #{type} gem: #{gem_path}"
+
+      tmp_gem_dir = compile_gem(gem_path)
+      raise "Failed installing #{gem_filename}" unless tmp_gem_dir
+
+      installed_gem_path = @cache.put(gem_path, tmp_gem_dir)
     end
     @logger.info "Adding #{gem_filename} to app..."
     copy_gem_to_app(installed_gem_path)
   end
-
 
   def copy_gem_to_app(src)
     return unless src && File.exists?(src)
@@ -183,14 +143,20 @@ class GemfileTask
     File.join(@app_dir, 'rubygems', 'ruby', @library_version)
   end
 
-  def fetch_gems(gems, directory)
-    return if gems.empty?
-    urls = gems.map { |(name, version)| rubygems_url_for(name, version) }.join(" ")
-    cmd  = "wget --quiet --retry-connrefused --connect-timeout=5 --no-check-certificate #{urls}"
+  def fetch_gem_from_rubygems(name, version, directory)
+    url = rubygems_url_for(name, version)
+    gem_filename = gem_filename(name, version)
+    cmd = "wget --quiet --retry-connrefused --connect-timeout=5 --no-check-certificate #{url}"
 
     Dir.chdir(directory) do
-      system(cmd)
+      raise "Failed fetching missing gem #{gem_filename} from Rubygems" unless system(cmd)
     end
+
+    File.join(directory, gem_filename)
+  end
+
+  def gem_filename(name, version)
+    "%s-%s.gem" % [ name, version ]
   end
 
   def rubygems_url_for(name, version)
@@ -218,7 +184,7 @@ class GemfileTask
   end
 
   # Perform a gem install from src_dir into a temporary directory
-  def install_gem(gemfile_path)
+  def compile_gem(gemfile_path)
     # Create tempdir that will house everything
     tmp_dir = Dir.mktmpdir
     at_exit do
