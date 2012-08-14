@@ -58,6 +58,9 @@ class LiveConsole
   # LiveConsole#start spawns a thread to listen for, accept, and provide an
   # IRB console to new connections.  If a thread is already running, this
   # method simply returns false; otherwise, it returns the new thread.
+  # Callers can pass in a block that will be run in each spawned console process
+  # after authentication.  This block can do any initialization logic, such as
+  # loading a Rails environment for remote Rails console.
   def start
     if thread
       if thread.alive?
@@ -69,14 +72,21 @@ class LiveConsole
     end
 
     self.thread = Thread.new {
-      start_blocking
+      if block_given?
+        start_blocking &Proc.new
+      else
+        start_blocking
+      end
     }
     thread
   end
 
   # LiveConsole#start_blocking executes a loop to listen for, accept,
   # and provide an IRB console to new connections.
-  # This is a blocking call and the only way to stop it is to kill the process
+  # This is a blocking call and the only way to stop it is to kill the process.
+  # Callers can pass in a block that will be run in each spawned console process
+  # after authentication.  This block can do any initialization logic, such as
+  # loading a Rails environment for remote Rails console.
   def start_blocking
     loop {
       conn = io.get_connection
@@ -91,6 +101,7 @@ class LiveConsole
               start_irb = false
             end
             if start_irb
+              yield if block_given?
               irb_io = GenericIOMethod.new conn.raw_input, conn.raw_output, readline
               begin
                 IRB.start_with_io(irb_io, bind)
