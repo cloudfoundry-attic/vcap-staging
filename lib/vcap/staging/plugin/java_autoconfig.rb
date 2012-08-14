@@ -1,5 +1,5 @@
 module JavaAutoconfig
-  AUTOSTAGING_JAR = 'auto-reconfiguration-0.6.4.jar'
+  AUTOSTAGING_JAR = 'auto-reconfiguration-0.6.5.jar'
 
   def copy_autostaging_jar(dest)
     FileUtils.mkdir_p dest
