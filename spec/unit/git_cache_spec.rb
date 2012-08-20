@@ -3,12 +3,13 @@ require "vcap/staging/plugin/git_cache"
 describe GitCache do
   before :each do
     @cache_dir = Dir.mktmpdir
+    @compiled_cache_dir = Dir.mktmpdir
     @working_dir = Dir.mktmpdir
     sha1 = Digest::SHA1.hexdigest("git://github.com/cloudfoundry/common.git")
     @uri_cache_dir = "%s/%s/%s/%s" % [ @cache_dir, sha1[0..1], sha1[2..3], sha1[4..-1] ]
 
     logger = double("Logger").as_null_object
-    @cache = GitCache.new(@cache_dir, logger)
+    @cache = GitCache.new(@cache_dir, @compiled_cache_dir, logger)
 
     @source = {:uri => "git://github.com/cloudfoundry/common.git",
                :revision => "e36886a189b82f880a5aa3e9169712d5d9048a88"}
@@ -18,6 +19,7 @@ describe GitCache do
 
   after :each do
     FileUtils.rm_rf(@cache_dir) if @cache_dir
+    FileUtils.rm_rf(@compiled_cache_dir) if @compiled_cache_dir
     FileUtils.rm_rf(@working_dir) if @working_dir
   end
 
@@ -48,5 +50,18 @@ describe GitCache do
     @source[:revision] = "a" * 40
     @cache.get_source(@source, @working_dir)
     File.exists?(check_file).should be true
+  end
+
+  it "should put gem into compiled cache" do
+    @cache.put_compiled_gem(@source_dir, @source[:revision])
+    cached_path = File.join(@compiled_cache_dir, @source[:revision][0..1], @source[:revision][2..-1])
+    File.exists?(cached_path).should be true
+  end
+
+  it "should get gem from compiled cache" do
+    @cache.put_compiled_gem(@source_dir, @source[:revision])
+    cached_path = File.join(@compiled_cache_dir, @source[:revision][0..1], @source[:revision][2..-1])
+    path = @cache.get_compiled_gem(@source[:revision])
+    path.should == cached_path
   end
 end

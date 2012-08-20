@@ -3,6 +3,7 @@ require "fileutils"
 require File.expand_path('../gem_cache', __FILE__)
 require File.expand_path('../git_cache', __FILE__)
 require File.expand_path('../secure_operations', __FILE__)
+require File.expand_path('../gemspec_builder', __FILE__)
 
 class GemfileTask
   include SecureOperations
@@ -27,7 +28,9 @@ class GemfileTask
     @logger.formatter = lambda { |sev, time, pname, msg| "#{msg}\n" }
 
     @cache = GemCache.new(File.join(@cache_base_dir, "gem_cache"))
-    @git_cache = GitCache.new(File.join(base_dir, "git_cache"), @logger)
+    git_repo_dir = File.join(base_dir, "git_cache")
+    git_compiled_gems_dir = File.join(@cache_base_dir, "git_gems")
+    @git_cache = GitCache.new(git_repo_dir, git_compiled_gems_dir, @logger)
   end
 
   def specs
@@ -39,14 +42,13 @@ class GemfileTask
       end
       # Copy the app to a directory visible by secure user
       system "cp -a #{File.join(@app_dir, "*")} #{tmp_dir}"
-      secure_file(tmp_dir)
       spec_file = File.join(tmp_dir,"specs")
       spec_cmd = "#{@ruby_cmd} #{File.expand_path('../gemfile_parser.rb', __FILE__)} #{spec_file}"
       spec_cmd = "#{spec_cmd} \"#{@options[:bundle_without]}\"" if @options[:bundle_without]
-      unless run_secure(spec_cmd, tmp_dir)
+      exitstatus, _ = run_secure(spec_cmd, tmp_dir)
+      if exitstatus != 0
         raise "Error resolving Gemfile"
       end
-      unsecure_file(spec_file)
       YAML.load_file(spec_file)
     end
   end
@@ -130,44 +132,63 @@ class GemfileTask
     # Skip in case we already processed request for gem in the same git scope
     return nil if File.exists?(dest)
 
-    # Get the source of the given revision
-    @logger.info("Need to fetch #{gem_filename} from Git source")
-    begin
-      tmp_dir = Dir.mktmpdir
-      tmp_source_path = @git_cache.get_source(spec[:source], tmp_dir)
-      gem_logname = "#{spec[:name]}-#{spec[:source][:revision]}"
-      raise "Failed fetching gem #{gem_logname} from source" unless tmp_source_path
+    # Check compiled gems cache
+    cached_gem_path = @git_cache.get_compiled_gem(spec[:source][:revision])
+    if cached_gem_path
+      copy_gem_to_app(gem_filename, cached_gem_path, dest)
+    else
+      begin
+        # Get the source of the given revision
+        @logger.info("Need to fetch #{gem_filename} from Git source")
 
-      # Build all gemspecs in source
-      gemspecs = Dir.glob(File.join(tmp_source_path, "{,*,*/*}.gemspec"))
-      # Add access to whole source to compilation user
-      secure_file(tmp_source_path)
+        tmp_dir = Dir.mktmpdir
+        tmp_source_path = @git_cache.get_source(spec[:source], tmp_dir)
+        gem_logname = "#{spec[:name]}-#{spec[:source][:revision]}"
+        raise "Failed fetching gem #{gem_logname} from source" unless tmp_source_path
 
-      gemspecs.each do |gemspec_path|
-        base_path = File.dirname(gemspec_path)
-        unsecure_file(base_path)
+        # Build all gemspecs with extensions in source
+        gemspecs = Dir.glob(File.join(tmp_source_path, "{,*,*/*}.gemspec"))
+        # Add access to whole source to compilation user
+        secure_file(tmp_source_path)
+        required_build = false
 
-        # Build gemspec
-        gem_path = build_gem(gemspec_path)
-        raise "Failed building #{File.basename(gemspec_path)}" unless gem_path
+        gemspecs.each do |gemspec_path|
+          gemspec = GemspecBuilder.new(gemspec_path, @ruby_cmd, @logger)
+          unsecure_file(gemspec.base_dir)
 
-        # Install gem
-        gem_full_name = File.basename(gem_path, ".gem")
-        installed_path = compile_gem(gem_path)
-        raise "Failed installing git gem #{gem_full_name}" unless installed_path
-        FileUtils.rm_f(gem_path)
+          # Only build gem if it has extensions
+          if gemspec.requires_build?
+            required_build = true
 
-        # Copy installed contents back to source
-        installed_gem_dir = File.join(installed_path, "gems", gem_full_name)
-        copy_dir_contents(installed_gem_dir, base_path)
-        spec_file = File.join(installed_path, "specifications", "#{gem_full_name}.gemspec")
-        update_gemspec(gemspec_path, spec_file)
+            # Build gemspec
+            gem_path = gemspec.build
+            raise "Failed building #{gemspec.filename}" unless gem_path
+
+            # Install gem
+            gem_full_name = File.basename(gem_path, ".gem")
+            installed_path = compile_gem(gem_path)
+            raise "Failed installing git gem #{gem_full_name}" unless installed_path
+            FileUtils.rm_f(gem_path)
+
+            # Copy installed contents back to source
+            installed_gem_dir = File.join(installed_path, "gems", gem_full_name)
+            copy_dir_contents(installed_gem_dir, gemspec.base_dir)
+            spec_file = File.join(installed_path, "specifications", "#{gem_full_name}.gemspec")
+            gemspec.update_from_path(spec_file)
+          else
+            # Evaluate gemspec
+            gemspec.update
+          end
+        end
+        # Put the source in app where bundler expects to see it
+        FileUtils.rm_rf(File.join(tmp_source_path, ".git"))
+        copy_gem_to_app(gem_filename, tmp_source_path, dest)
+
+        # Put in compiled cache if we needed to build it
+        @git_cache.put_compiled_gem(tmp_source_path, spec[:source][:revision]) if required_build
+      ensure
+        secure_delete(tmp_dir)
       end
-      # Put the source in app where bundler expects to see it
-      FileUtils.rm_rf(File.join(tmp_source_path, ".git"))
-      copy_gem_to_app(gem_filename, tmp_source_path, dest)
-    ensure
-      secure_delete(tmp_dir)
     end
   end
 
@@ -208,14 +229,6 @@ class GemfileTask
       FileUtils.copy_entry(src, dest)
     rescue
       @logger.error "Failed copying gem to #{dest}"
-    end
-  end
-
-  def update_gemspec(old_gemspec, new_gemspec)
-    begin
-      FileUtils.copy_entry(new_gemspec, old_gemspec)
-    rescue
-      @logger.error "Failed updating gemspec #{old_gemspec}"
     end
   end
 
@@ -263,19 +276,6 @@ class GemfileTask
     end
   end
 
-  def build_gem(spec_path)
-    base = File.dirname(spec_path)
-    gem_path = nil
-    Dir.chdir(base) do
-      cmd = "#{@ruby_cmd} -S gem build '#{spec_path}' --force"
-      secure_file(base)
-      run_secure(cmd, base)
-      unsecure_file(base)
-      gem_path = Dir[File.join(base, "*.gem")].sort_by{|f| File.mtime(f)}.last
-    end
-    gem_path
-  end
-
   # Perform a gem install from src_dir into a temporary directory
   def compile_gem(gemfile_path)
     # Create tempdir that will house everything
@@ -295,7 +295,6 @@ class GemfileTask
     gem_install_dir = File.join(tmp_dir, 'gem_install_dir')
     begin
       Dir.mkdir(gem_install_dir)
-      secure_file(tmp_dir)
     rescue => e
       @logger.error "Failed creating gem install dir: #{e}"
       return nil
@@ -303,16 +302,7 @@ class GemfileTask
 
     @logger.debug("Doing a gem install from #{staged_gemfile} into #{gem_install_dir} as user #{@uid || 'cc'}")
     staging_cmd = "#{@ruby_cmd} -S gem install #{staged_gemfile} --local --no-rdoc --no-ri -E -w -f --ignore-dependencies --install-dir #{gem_install_dir}"
-    if run_secure(staging_cmd)
-      # Make file visible to stager user again for copying gem to app
-      begin
-        unsecure_file(tmp_dir)
-      rescue => e
-        @logger.error "Failed to unsecure tmp dir: #{e}"
-      end
-      gem_install_dir
-    else
-      nil
-    end
+    exitstatus, _ = run_secure(staging_cmd, tmp_dir)
+    exitstatus == 0 ? gem_install_dir : nil
   end
 end
