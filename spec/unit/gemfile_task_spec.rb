@@ -70,38 +70,46 @@ describe "GemfileTask" do
     before :each do
       test_gem = app_fixture_base_directory.join("sinatra_git", "test_gem")
       FileUtils.cp_r(test_gem, @git_working_dir)
-      spec = {:name => "hello", :version => "0.0.1",
+      @spec = {:name => "hello", :version => "0.0.1",
               :source => {:url => "url",
                           :revision => "revision",
                           :git_scope => "git_scope"}}
       @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir)
-      @task.instance_variable_get(:@git_cache).stub(:get_source) do |source, where|
+      @task_git_cache = @task.instance_variable_get(:@git_cache)
+      @task_git_cache.stub(:get_source) do |source, where|
         File.join(@git_working_dir, "test_gem")
       end
-      @task.install_git_gem(spec)
+      @task_git_cache.stub(:get_compiled_gem) { |source, where| nil }
+      @task_git_cache.stub(:put_compiled_gem) { |source, where| nil }
     end
 
     it "should locate nested gemspecs" do
+      @task.install_git_gem(@spec)
       gem_file = File.join(@bundler_gems_dir, "git_scope", "hello", "hello.gemspec")
       File.exists?(gem_file).should be true
       gem_file = File.join(@bundler_gems_dir, "git_scope", "gemtwo", "gemtwo.gemspec")
       File.exists?(gem_file).should be true
     end
 
-    it "should update gemspecs" do
-      gemspec_file = File.join(@bundler_gems_dir, "git_scope", "gemtwo", "gemtwo.gemspec")
-      gemspec_data = File.read(gemspec_file)
-      gemspec_data.should_not match /Gemtwo::VERSION/
-      gemspec_data.should match /s\.version = "0\.0\.1"/
-    end
-
     it "should build native extensions" do
+      @task.install_git_gem(@spec)
       native_gem = File.join(@bundler_gems_dir, "git_scope", "hello")
       expect {
         require File.join(native_gem, "ext", "hello")
         ::Hello.should respond_to(:hola)
         ::Hello.hola.should == "hola"
       }.not_to raise_error
+    end
+
+    it "should check compiled gem cache" do
+      @task_git_cache.should_receive(:get_compiled_gem)
+      @task.install_git_gem(@spec)
+    end
+
+    it "should put compiled gem in cache if it has extensions" do
+      # hello gem has extensions
+      @task_git_cache.should_receive(:put_compiled_gem)
+      @task.install_git_gem(@spec)
     end
   end
 end
