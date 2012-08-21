@@ -31,8 +31,8 @@ module RailsDatabaseSupport
     if production_db
       write_database_yaml(production_db)
     else
-      puts "Unable to determine primary database from multiple: #{bindings.inspect}"
-      exit 1
+      raise "Unable to determine primary database from multiple.  " +
+        "Please bind only one database service to Rails applications."
     end
   end
 
@@ -45,7 +45,6 @@ module RailsDatabaseSupport
       { 'adapter' => 'postgresql', 'encoding' => 'utf8', 'pool' => 5,
         'reconnect' => false }.merge(credentials_from(binding))
     else
-      # Should never get here, so it is an exception not 'exit 1'
       raise "Unable to configure unknown database: #{binding.inspect}"
     end
   end
@@ -54,8 +53,7 @@ module RailsDatabaseSupport
   def credentials_from(binding)
     creds = binding[:credentials]
     unless creds
-      puts "Database binding failed to include credentials: #{binding.inspect}"
-      exit 1
+      raise "Database binding failed to include credentials"
     end
     { 'host' => creds[:hostname], 'port' => creds[:port],
       'username' => creds[:user], 'password' => creds[:password],

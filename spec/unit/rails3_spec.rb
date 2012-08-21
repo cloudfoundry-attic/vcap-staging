@@ -296,7 +296,12 @@ wait $STARTED
       lambda {stage(:rails3,{:services=>[{:label=>"postgresql-9.0",
         :name=> "myservice", :credentials=>{:hostname=>"thehost", :user=>"auser", :port=>34567, :password=>"testa", :name=>"mydb23"}},
         {:label=>"postgresql-9.0", :name=>"mydbservice",
-        :credentials=>{:hostname=>"myhost", :user=>"testuser", :port=>345, :password=>"test", :name=>"mydb"}}]})}.should raise_error SystemExit
+        :credentials=>{:hostname=>"myhost", :user=>"testuser", :port=>345, :password=>"test", :name=>"mydb"}}]})}.should raise_error RuntimeError
+    end
+
+    it "is not auto-reconfigured when DB binding is missing credentials" do
+      lambda {stage(:rails3,{:services=>[{:label=>"postgresql-9.0",
+        :name=> "myservice"}]})}.should raise_error RuntimeError
     end
   end
 
