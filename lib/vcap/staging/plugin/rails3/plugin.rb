@@ -30,7 +30,7 @@ class Rails3Plugin < StagingPlugin
     cf_config_file =  destination_directory + '/app/config/cloudfoundry.yml'
     if File.exists? cf_config_file
       config = YAML.load_file(cf_config_file)
-      if config['dbmigrate'] == false
+      if !config || config['dbmigrate'] == false
         return false
       end
     end
