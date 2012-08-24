@@ -11,7 +11,7 @@ module RubyAutoconfig
     cf_config_file =  destination_directory + '/app/config/cloudfoundry.yml'
     if File.exists? cf_config_file
       config = YAML.load_file(cf_config_file)
-      if config['autoconfig'] == false
+      if config && config['autoconfig'] == false
         return false
       end
     end
