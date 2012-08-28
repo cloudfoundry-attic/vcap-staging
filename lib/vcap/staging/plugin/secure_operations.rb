@@ -7,14 +7,18 @@ module SecureOperations
   # Run a process as a secure user, if @uid is set.
   # Otherwise, process is run as current user
   # Use the "where" variable to set the process working dir,
-  def run_secure(cmd, where)
+  def run_secure(cmd, where, options={})
     exitstatus = nil
     output = nil
 
     secure_file(where)
     begin
       if @uid
-        cmd = "cd #{where} && sudo -u '##{@uid}' #{cmd}"
+        if options[:secure_group]
+          cmd ="sudo -u '##{@uid}' sg #{secure_group} -c \"cd #{where} && #{cmd}\" 2>&1"
+        else
+          cmd = "cd #{where} && sudo -u '##{@uid}' #{cmd}"
+        end
       else
         cmd = "cd #{where} && #{cmd}"
       end
@@ -46,7 +50,8 @@ module SecureOperations
       if $?.exitstatus != 0
         raise "Failed chmodding dir: #{chmod_output}"
       end
-      chown_output = `sudo /bin/chown -R #{@uid} #{file} 2>&1`
+      chown_user = @gid ? "#{@uid}:#{@gid}" : @uid
+      chown_output = `sudo /bin/chown -R #{chown_user} #{file} 2>&1`
       if $?.exitstatus != 0
         raise "Failed chowning dir: #{chown_output}"
       end
@@ -57,8 +62,12 @@ module SecureOperations
   # to current user
   def unsecure_file(file)
     if @uid
-      user = `whoami`.chomp
-      chown_output = `sudo /bin/chown -R #{user} #{file} 2>&1`
+      chown_user = `id -u`.chomp
+      if @gid
+        user_group = `id -g`.chomp
+        chown_user = "#{chown_user}:#{user_group}"
+      end
+      chown_output = `sudo /bin/chown -R #{chown_user} #{file} 2>&1`
       if $?.exitstatus != 0
         raise "Failed chowning dir: #{chown_output}"
       end
@@ -68,8 +77,14 @@ module SecureOperations
   # Change ownership of file back to current user
   # and delete file
   def secure_delete(file)
-    user = `whoami`.chomp
-    `sudo /bin/chown -R #{user} #{file}` if @uid
-    FileUtils.rm_rf(file)
+    if File.exists?(file)
+      unsecure_file(file)
+      FileUtils.rm_rf(file)
+    end
+  end
+
+  def secure_group
+    group_name = `awk -F: '{ if ( $3 == #{@gid} ) { print $1 } }' /etc/group`
+    group_name.chomp
   end
 end
