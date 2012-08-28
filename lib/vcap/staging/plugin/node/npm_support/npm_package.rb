@@ -1,26 +1,65 @@
 require "fileutils"
+require 'uri'
+require File.expand_path("../../../secure_operations", __FILE__)
 
 class NpmPackage
+  include SecureOperations
 
-  def initialize(name, version, where, secure_uid, secure_gid,
-                 npm_helper, logger, cache)
+  def initialize(name, props, where, secure_uid, secure_gid,
+                 npm_helper, logger, cache, git_cache)
     @name  = name.chomp
-    @version = version.chomp
+    @target = (props["from"] || props["version"]).chomp
+    @source_type = url_provided? ? "git" : "registry"
     @npm_helper = npm_helper
-    @secure_uid = secure_uid
-    @secure_gid = secure_gid
+    @uid = secure_uid
+    @gid = secure_gid
     @logger = logger
     @cache = cache
+    @git_cache = git_cache
     @dst_dir = File.join(where, "node_modules", @name)
   end
 
   def install
+    # Parsing source target according to npm source
+    # (https://github.com/isaacs/npm/blob/master/lib/install.js#resolver):
+    # If there is a "from" field use it as target
+    # Else use "version" as target
+    # If "version" starts with "http" or "git" it's a git URL
+    # Else it is fetched from npm registry
     if url_provided?
-      @logger.warn("Failed installing package #{@name}. URLs are not supported")
+      install_from_git
+    else
+      install_from_registry
+    end
+  end
+
+  def install_from_git
+    # We need to parse URL to get git repo URL and reference (commit SHA, tag, branch)
+    begin
+      parsed_url = URI(@target)
+    rescue => e
+      @logger.warn("Error parsing module source URL: #{e.message}")
+      return nil
+    end
+    ref = parsed_url.fragment || "master"
+    git_url = @target.sub(/#.*$/, "")
+
+    fetched = fetch_from_git(git_url, ref)
+    unless fetched
+      @logger.warn("Failed fetching module #{@name}@#{@target} from Git source")
       return nil
     end
 
-    cached = @cache.get(@name, @version)
+    # Unlike gemspec package.json does not provide information if module has native extensions
+    # So we build everything
+    installed = build(fetched)
+    if installed
+      return @dst_dir if copy_to_dst(installed)
+    end
+  end
+
+  def install_from_registry
+    cached = @cache.get(@name, @target)
     if cached
       return @dst_dir if copy_to_dst(cached)
 
@@ -28,12 +67,15 @@ class NpmPackage
       @registry_data = get_registry_data
 
       unless @registry_data.is_a?(Hash) && @registry_data["version"]
-        log_name = @version.empty? ? @name : "#{@name}@#{@version}"
+        log_name = @target.empty? ? @name : "#{@name}@#{@target}"
         @logger.warn("Failed getting the requested package: #{log_name}")
         return nil
       end
 
-      installed = fetch_build
+      fetched = fetch_from_registry(@registry_data["source"])
+      return unless fetched
+
+      installed = build(fetched)
 
       if installed
         cached = @cache.put(installed, @name, @registry_data["version"])
@@ -42,7 +84,16 @@ class NpmPackage
     end
   end
 
-  def fetch(source, where)
+  def fetch_from_git(uri, ref)
+    tmp_dir = mk_temp_dir
+    source = {}
+    source[:uri] = uri
+    source[:revision] = ref
+    @git_cache.get_source(source, tmp_dir)
+  end
+
+  def fetch_from_registry(source)
+    where = mk_temp_dir
     Dir.chdir(where) do
       fetched_tarball = "package.tgz"
       cmd = "wget --quiet --retry-connrefused --connect-timeout=5 " +
@@ -50,14 +101,12 @@ class NpmPackage
       `#{cmd}`
       return unless $?.exitstatus == 0
 
-      package_dir = File.join(where, "package")
-      FileUtils.mkdir_p(package_dir)
-
       fetched_path = File.join(where, fetched_tarball)
-      `tar xzf #{fetched_path} --directory=#{package_dir} --strip-components=1 2>&1`
+      `tar xzf #{fetched_path} --directory=#{where} --strip-components=1 2>&1`
       return unless $?.exitstatus == 0
+      FileUtils.rm_rf(fetched_path)
 
-      File.exists?(package_dir) ? package_dir : nil
+      File.exists?(where) ? where : nil
     end
   end
 
@@ -69,44 +118,11 @@ class NpmPackage
     $?.exitstatus == 0
   end
 
-  # This is done in a similar to ruby gems way until PackageCache is available
-
-  def fetch_build
-    tmp_dir = Dir.mktmpdir
-    at_exit do
-      user = `whoami`.chomp
-      `sudo /bin/chown -R #{user} #{tmp_dir}` if @secure_uid
-      FileUtils.rm_rf(tmp_dir)
-    end
-
-    package_dir = fetch(@registry_data["source"], tmp_dir)
-    return unless package_dir
-
-    if @secure_uid
-      chown_cmd = "sudo /bin/chown -R #{@secure_uid}:#{@secure_gid} #{tmp_dir} 2>&1"
-      chown_output = `#{chown_cmd}`
-
-      if $?.exitstatus != 0
-        @logger.error("Failed chowning install dir: #{chown_output}")
-        return nil
-      end
-    end
-
+  def build(package_dir)
     cmd = @npm_helper.build_cmd(package_dir)
+    cmd_status, output = run_secure_group(cmd, package_dir)
 
-    if @secure_uid
-      cmd ="sudo -u '##{@secure_uid}' sg #{secure_group} -c \"cd #{tmp_dir} && #{cmd}\" 2>&1"
-    else
-      cmd ="cd #{tmp_dir} && #{cmd}"
-    end
-
-    output = nil
-    IO.popen(cmd) do |io|
-      output = io.read
-    end
-    child_status = $?.exitstatus
-
-    if child_status != 0
+    if cmd_status != 0
       @logger.warn("Failed installing package: #{@name}")
       if output =~ /npm not ok/
         output.lines.grep(/^npm ERR! message/) do |error_message|
@@ -114,22 +130,13 @@ class NpmPackage
         end
       end
     end
-
-    if @secure_uid
-      # Kill any stray processes that the npm compilation may have created
-      `sudo -u '##{@secure_uid}' pkill -9 -U #{@secure_uid} 2>&1`
-      me = `whoami`.chomp
-      `sudo chown -R #{me} #{tmp_dir}`
-      @logger.debug("Failed chowning #{tmp_dir} to #{me}") if $?.exitstatus != 0
-    end
-
-    return package_dir if child_status == 0
+    cmd_status == 0 ? package_dir : nil
   end
 
   def get_registry_data
     # TODO: 1. make direct request, we need only tarball source
     # 2. replicate npm registry database
-    package_link = "#{@name}@\"#{@version}\""
+    package_link = "#{@name}@\"#{@target}\""
     output = `#{@npm_helper.versioner_cmd(package_link)} 2>&1`
     if $?.exitstatus != 0 || output.empty?
       return nil
@@ -140,17 +147,20 @@ class NpmPackage
         return nil
       end
     end
-    return resolved
+    resolved
   end
 
   private
 
   def url_provided?
-    @version =~ /^http/ or @version =~ /^git/
+    @target =~ /^http/ or @target =~ /^git/
   end
 
-  def secure_group
-    group_name = `awk -F: '{ if ( $3 == #{@secure_gid} ) { print $1 } }' /etc/group`
-    group_name.chomp
+  def mk_temp_dir
+    tmp_dir = Dir.mktmpdir
+    at_exit do
+      secure_delete(tmp_dir)
+    end
+    tmp_dir
   end
 end

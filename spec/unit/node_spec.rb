@@ -203,15 +203,10 @@ end
 
 describe "A Node.js app with dependencies being staged" do
 
-  def node_config
-    node_staging_env[:runtime_info]
-  end
-
   # check if node manifest has specified path to npm
   def pending_unless_npm_provided(runtime)
-    unless node_config[:npm]
-      pending "npm config was not provided"
-    end
+    npm = node_staging_env[:runtime_info][:npm]
+    pending "npm config was not provided, use NPM to specify it" unless npm
   end
 
   def package_config(package_dir)
@@ -343,6 +338,20 @@ describe "A Node.js app with dependencies being staged" do
       end
     end
   end
+
+  describe "with git dependencies in npm-shrinkwrap" do
+    before do
+      app_fixture :node_deps_git
+    end
+
+    it "install git modules" do
+      stage node_staging_env do |staged_dir|
+        pending_unless_npm_provided("node")
+        modules_dir = File.join(staged_dir, "app", "node_modules")
+        test_package_version(File.join(modules_dir, "graceful-fs"), "1.1.10")
+      end
+    end
+  end
 end
 
 def node_staging_env
@@ -350,7 +359,8 @@ def node_staging_env
      :name => "node",
      :version => "0.4.12",
      :description => "Node.js",
-     :executable => "node"
+     :executable => "node",
+     :npm => ENV["NPM"] || (ENV["DEA_NODE06"] ? File.join(ENV["DEA_NODE06"], "bin", "npm") : nil)
    },
    :framework_info => {
      :name =>"node",
