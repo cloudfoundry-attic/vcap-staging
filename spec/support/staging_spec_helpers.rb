@@ -56,7 +56,6 @@ module StagingSpecHelpers
                    app_source
                  end
     env[:environment] ||= []
-
     runtime_name = env[:runtime_info][:name].upcase
     if ENV["VCAP_RUNTIME_#{runtime_name}"]
       env[:runtime_info][:executable] = ENV["VCAP_RUNTIME_#{runtime_name}"]
@@ -78,4 +77,3 @@ module StagingSpecHelpers
     FileUtils.rm_r(source_tempdir) if source_tempdir
   end
 end
-
