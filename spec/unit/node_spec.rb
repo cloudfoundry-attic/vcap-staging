@@ -203,15 +203,10 @@ end
 
 describe "A Node.js app with dependencies being staged" do
 
-  def node_config
-    runtime_staging_config("node", "node")
-  end
-
   # check if node manifest has specified path to npm
   def pending_unless_npm_provided(runtime)
-    unless node_config["npm"]
-      pending "npm config was not provided in manifest"
-    end
+    npm = node_npm_path
+    pending "npm config was not provided, use NPM to specify it" unless npm
   end
 
   def package_config(package_dir)
@@ -340,6 +335,20 @@ describe "A Node.js app with dependencies being staged" do
         test_package_version(File.join(express_modules, "mime"), "1.2.4")
         test_package_version(File.join(express_modules, "qs"), "0.4.2")
         test_package_version(File.join(express_modules, "mkdirp"), "0.3.0")
+      end
+    end
+  end
+
+  describe "with git dependencies in npm-shrinkwrap" do
+    before do
+      app_fixture :node_deps_git
+    end
+
+    it "install git modules" do
+      stage :node do |staged_dir|
+        pending_unless_npm_provided("node")
+        modules_dir = File.join(staged_dir, "app", "node_modules")
+        test_package_version(File.join(modules_dir, "graceful-fs"), "1.1.10")
       end
     end
   end

@@ -69,6 +69,9 @@ module StagingSpecHelpers
             attrs['version'] = ENV["VCAP_RUNTIME_#{name.upcase}_VER"]
           end
         end
+        if name == "node"
+          attrs["npm"] = node_npm_path
+        end
       end
     end
     stager.stage_application
@@ -89,6 +92,11 @@ module StagingSpecHelpers
         return attrs if name == runtime
       end
     end
+  end
+
+  def node_npm_path
+    ENV["NPM"] ||
+        (ENV["DEA_NODE06"] ? File.join(ENV["DEA_NODE06"], "bin", "npm") : nil)
   end
 end
 

@@ -8,14 +8,18 @@ module SecureOperations
   # Otherwise, process is run as current user
   # Use the "where" variable to set the process working dir,
   # defaults to "/"
-  def run_secure(cmd, where)
+  def run_secure(cmd, where, group=false)
     exitstatus = nil
     output = nil
 
     secure_file(where)
     begin
       if @uid
-        cmd = "cd #{where} && sudo -u '##{@uid}' #{cmd}"
+        if group
+          cmd ="sudo -u '##{@uid}' sg #{secure_group} -c \"cd #{where} && #{cmd}\" 2>&1"
+        else
+          cmd = "cd #{where} && sudo -u '##{@uid}' #{cmd}"
+        end
       else
         cmd = "cd #{where} && #{cmd}"
       end
@@ -39,6 +43,11 @@ module SecureOperations
     [ exitstatus, output ]
   end
 
+  def run_secure_group(cmd, where)
+    # Some commands like npm require directory to belong to secure group
+    run_secure(cmd, where, true)
+  end
+
   def run_secure?(cmd, chdir)
     exitstatus, _ = run_secure(cmd, chdir)
     exitstatus == 0
@@ -52,7 +61,8 @@ module SecureOperations
       if $?.exitstatus != 0
         raise "Failed chmodding dir: #{chmod_output}"
       end
-      chown_output = `sudo /bin/chown -R #{@uid} #{file} 2>&1`
+      chown_user = @gid ? "#{@uid}:#{@gid}" : @uid
+      chown_output = `sudo /bin/chown -R #{chown_user} #{file} 2>&1`
       if $?.exitstatus != 0
         raise "Failed chowning dir: #{chown_output}"
       end
@@ -77,5 +87,10 @@ module SecureOperations
     user = `whoami`.chomp
     `sudo /bin/chown -R #{user} #{file}` if @uid
     FileUtils.rm_rf(file)
+  end
+
+  def secure_group
+    group_name = `awk -F: '{ if ( $3 == #{@gid} ) { print $1 } }' /etc/group`
+    group_name.chomp
   end
 end

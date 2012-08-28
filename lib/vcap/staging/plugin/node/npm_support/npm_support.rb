@@ -4,6 +4,7 @@ require "fileutils"
 require File.expand_path("../npm_cache", __FILE__)
 require File.expand_path("../npm_package", __FILE__)
 require File.expand_path("../npm_helper", __FILE__)
+require File.expand_path("../../../git_cache", __FILE__)
 
 module NpmSupport
 
@@ -28,8 +29,11 @@ module NpmSupport
     return unless @npm_helper.npm_version
 
     cache_base_dir = StagingPlugin.platform_config["cache"]
-    cache_dir  = File.join(cache_base_dir, "node_modules", library_version)
-    @cache = NpmCache.new(cache_dir, logger)
+    cache_version_dir  = File.join(cache_base_dir, "node_modules", library_version)
+    @cache = NpmCache.new(cache_version_dir, logger)
+
+    @git_cache = GitCache.new(File.join(cache_base_dir, "git_cache"),
+                              File.join(cache_version_dir, "git_cache"), logger)
 
     logger.info("Installing dependencies. Node version #{runtime["version"]}")
     install_packages(@dependencies, app_directory)
@@ -46,8 +50,8 @@ module NpmSupport
 
   def install_packages(dependencies, where)
     dependencies.each do |name, props|
-      package = NpmPackage.new(name, props["version"], where, @staging_uid,
-                               @staging_gid, @npm_helper, logger, @cache)
+      package = NpmPackage.new(name, props, where, @staging_uid,
+                               @staging_gid, @npm_helper, logger, @cache, @git_cache)
       installed_dir = package.install
       if installed_dir && props["dependencies"].is_a?(Hash)
         install_packages(props["dependencies"], installed_dir)
