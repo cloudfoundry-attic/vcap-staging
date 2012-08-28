@@ -16,7 +16,8 @@ class GitCache
     return unless source[:uri] && source[:revision]
     uri = normalize_uri(source[:uri])
     revision = source[:revision].strip
-    return unless revision =~ /^[a-z0-9]+$/
+    # Check that revision follows git-check-ref-format
+    return unless revision =~ /^[a-z0-9_\-\/\.]*[a-z0-9_\-]$/
 
     cached_path = find_source(uri, revision)
     return unless cached_path && File.directory?(cached_path)
