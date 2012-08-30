@@ -21,7 +21,7 @@ export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
 export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
-export RUBYOPT="-I$PWD/ruby -rstdsync"
+export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
 unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
@@ -42,16 +42,6 @@ echo "$STARTED" >> ../run.pid
 wait $STARTED
       EXPECTED
     end
-  end
-
-  it "generates an auto-config script" do
-     stage :rails3 do |staged_dir|
-       auto_stage_script = File.join(staged_dir,'app','config','initializers','01-autoconfig.rb')
-       script_body = File.read(auto_stage_script)
-       script_body.should == <<-EXPECTED
-require 'cfautoconfig'
-     EXPECTED
-     end
   end
 
   it "installs autoconfig gem" do
@@ -86,7 +76,7 @@ export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
 export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
-export RUBYOPT="-I$PWD/ruby -rstdsync"
+export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
 unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
@@ -146,7 +136,7 @@ export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
 export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
-export RUBYOPT="-I$PWD/ruby -rstdsync"
+export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
 unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
@@ -226,7 +216,7 @@ export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
 export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
-export RUBYOPT="-I$PWD/ruby -rstdsync"
+export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
 unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
@@ -334,7 +324,7 @@ export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
 export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
-export RUBYOPT="-I$PWD/ruby -rstdsync"
+export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
 unset BUNDLE_GEMFILE
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
@@ -354,6 +344,43 @@ STARTED=$!
 echo "$STARTED" >> ../run.pid
 wait $STARTED
          EXPECTED
+      end
+    end
+  end
+  describe "which disables auto-reconfig" do
+    before do
+      app_fixture :rails3_db_migrations_disabled
+    end
+
+    it "generates a start script that does not include auto-reconfig" do
+      stage :rails3 do |staged_dir|
+        executable = '%VCAP_LOCAL_RUNTIME%'
+        start_script = File.join(staged_dir, 'startup')
+        script_body = File.read(start_script)
+        script_body.should == <<-EXPECTED
+#!/bin/bash
+export DISABLE_AUTO_CONFIG="mysql:postgresql"
+export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
+export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
+export RAILS_ENV="${RAILS_ENV:-production}"
+export RUBYOPT="-I$PWD/ruby -rstdsync"
+unset BUNDLE_GEMFILE
+mkdir ruby
+echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+if [ -n "$VCAP_CONSOLE_PORT" ]; then
+  cd app
+  #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
+  CONSOLE_STARTED=$!
+  echo "$CONSOLE_STARTED" >> ../console.pid
+  cd ..
+fi
+cd app
+#{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+STARTED=$!
+echo "$STARTED" >> ../run.pid
+wait $STARTED
+        EXPECTED
       end
     end
   end
