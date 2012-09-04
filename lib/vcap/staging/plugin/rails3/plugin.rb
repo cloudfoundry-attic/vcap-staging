@@ -62,7 +62,6 @@ class Rails3Plugin < StagingPlugin
       if autoconfig_enabled?
         configure_database # TODO - Fail if we just configured a database that the user did not bundle a driver for.
         install_autoconfig_gem
-        setup_autoconfig_script
       end
       create_asset_plugin
       create_startup_script
@@ -83,11 +82,6 @@ class Rails3Plugin < StagingPlugin
     end
   end
 
-  def setup_autoconfig_script
-    FileUtils.cp(resource_dir+ '/01-autoconfig.rb',destination_directory +
-      '/app/config/initializers')
-  end
-
   def startup_script
     vars = {}
     # PWD here is before we change to the 'app' directory.
@@ -95,7 +89,11 @@ class Rails3Plugin < StagingPlugin
       vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:$PATH"
       vars['GEM_PATH'] = vars['GEM_HOME'] = "$PWD/app/rubygems/ruby/#{library_version}"
     end
-    vars['RUBYOPT'] = '-I$PWD/ruby -rstdsync'
+    if autoconfig_enabled?
+      vars['RUBYOPT'] = "-I$PWD/ruby #{autoconfig_load_path} -rcfautoconfig -rstdsync"
+    else
+      vars['RUBYOPT'] = '-I$PWD/ruby -rstdsync'
+    end
     vars['DISABLE_AUTO_CONFIG'] = 'mysql:postgresql'
     vars['RAILS_ENV'] = '${RAILS_ENV:-production}'
     generate_startup_script(vars) do
