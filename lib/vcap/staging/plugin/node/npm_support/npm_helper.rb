@@ -36,10 +36,11 @@ class NpmHelper
     cmd = "--production true --color false --loglevel error --non-global true --force true"
     cmd += " --user #{@uid}" if @uid
     cmd += " --group #{@gid}" if @gid
+    cmd
   end
 
   def build_cmd(where)
-    "#{npm_cmd} build #{where} #{npm_flags}"
+    "#{npm_cmd} build #{where} #{npm_flags} 2>&1"
   end
 
   def install_cmd(package, where, cache_dir, tmp_dir)
@@ -48,10 +49,9 @@ class NpmHelper
       "--registry http://registry.npmjs.org/"
   end
 
-  def versioner_cmd(package_link)
+  def versioner_cmd(node_range, npm_range)
     versioner_path = File.expand_path("../../resources/versioner/versioner.js", __FILE__)
-    "#{node_safe_env} #{@node_path} #{versioner_path} " +
-    "--package=#{package_link} --node-version=#{@node_version} " +
-    "--npm-version=#{@npm_version}"
+    "#{node_safe_env} #{@node_path} #{versioner_path} --node-range=\"#{node_range}\""+
+    " --npm-range=\"#{npm_range}\" --node-version=#{@node_version} --npm-version=#{@npm_version}"
   end
 end
