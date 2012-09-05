@@ -1,16 +1,6 @@
-class NpmHelper
+require "shellwords"
 
-  attr_accessor :npm_version
-
-  def initialize(node_path, node_version, npm_path, uid, gid)
-    @node_path = node_path
-    @node_version = node_version
-    @npm_path = npm_path
-    @npm_version = get_npm_version
-    @uid = uid
-    @gid = gid
-  end
-
+module NpmHelper
   def get_npm_version
     version = `#{npm_cmd} -v 2>&1`
     return version.chomp if $?.exitstatus == 0
@@ -36,22 +26,39 @@ class NpmHelper
     cmd = "--production true --color false --loglevel error --non-global true --force true"
     cmd += " --user #{@uid}" if @uid
     cmd += " --group #{@gid}" if @gid
+    cmd
   end
 
-  def build_cmd(where)
-    "#{npm_cmd} build #{where} #{npm_flags}"
+  def run_build(where)
+    cmd = "#{npm_cmd} build #{where} #{npm_flags} 2>&1"
+    run_secure(cmd, where, :secure_group => true)
   end
 
-  def install_cmd(package, where, cache_dir, tmp_dir)
-    "#{npm_cmd} install #{package} --prefix #{where} #{npm_flags} " +
-      "--cache #{cache_dir} --tmp #{tmp_dir} --node_version #{@node_version} " +
-      "--registry http://registry.npmjs.org/"
-  end
-
-  def versioner_cmd(package_link)
+  def verify_engine_versions(node_range, npm_range)
+    # Using node module semver to validate node and npm requirements
     versioner_path = File.expand_path("../../resources/versioner/versioner.js", __FILE__)
-    "#{node_safe_env} #{@node_path} #{versioner_path} " +
-    "--package=#{package_link} --node-version=#{@node_version} " +
-    "--npm-version=#{@npm_version}"
+    cmd = "#{node_safe_env} #{@node_path} #{versioner_path} --node-range=#{shellescape(node_range.to_s)}"
+    cmd += " --npm-range=#{shellescape(npm_range.to_s)} --node-version=#{shellescape(@node_version)}"
+    cmd += " --npm-version=#{@npm_version}"
+    output = `#{cmd} 2>&1`
+
+    [$?.exitstatus, output]
+  end
+
+  def fetch(source, dst)
+    cmd = "wget --quiet --retry-connrefused --connect-timeout=5 " +
+      "--no-check-certificate --output-document=#{dst} #{shellescape(source)}"
+    `#{cmd}`
+    $?.exitstatus
+  end
+
+  def unpack(what, where)
+    cmd = "tar xzf #{what} --directory=#{where} --strip-components=1 2>&1"
+    `#{cmd}`
+    $?.exitstatus
+  end
+
+  def shellescape(word)
+    Shellwords.escape(word)
   end
 end

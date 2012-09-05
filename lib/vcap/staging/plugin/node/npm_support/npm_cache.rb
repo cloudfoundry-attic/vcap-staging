@@ -1,31 +1,57 @@
 require "fileutils"
 
 class NpmCache
-  def initialize(directory, logger)
-    @cached_dir  = File.join(directory, "npm_cache")
+  def initialize(base_dir, library_version, logger)
+    # fetched contains fetched from registry by module name and version
+    @fetched_cache_dir = File.join(base_dir, "fetched")
+    FileUtils.mkdir_p(@fetched_cache_dir)
+
+    # installed_cache_dir contains modules with extensions after npm install
+    # by module directory hash and specific node version
+    @installed_cache_dir  = File.join(base_dir, "installed", library_version)
+    FileUtils.mkdir_p(@installed_cache_dir)
+
     @logger = logger
-    FileUtils.mkdir_p(@cached_dir)
   end
 
-  def put(source, name, version)
-    return unless source && File.exists?(source)
-    dir = File.join(@cached_dir, name, version)
+  def put_fetched(source, name, version)
+    dir = File.join(@fetched_cache_dir, name, version)
     package_path = File.join(dir, "package")
-    return if File.exists?(package_path)
-    FileUtils.mkdir_p(File.dirname(package_path))
+    put(source, package_path)
+  end
+
+  def get_fetched(name, version)
+    dir = File.join(@fetched_cache_dir, name, version)
+    package_path = File.join(dir, "package")
+    File.directory?(package_path) ? package_path : nil
+  end
+
+  def get_installed(package_hash)
+    package_path = installed_path(package_hash)
+    File.directory?(package_path) ? package_path : nil
+  end
+
+  def put_installed(package_hash, source)
+    package_path = installed_path(package_hash)
+    put(source, package_path)
+  end
+
+  private
+
+  def put(source, dest)
+    return unless source && File.exists?(source)
+    return if File.exists?(dest)
+    FileUtils.mkdir_p(File.dirname(dest))
     begin
-      File.rename(source, package_path)
+      File.rename(source, dest)
     rescue => e
       @logger.debug("Failed putting into cache: #{e}")
       return nil
     end
-
-    package_path
+    dest
   end
 
-  def get(name, version)
-    dir = File.join(@cached_dir, name, version)
-    package_path = File.join(dir, "package")
-    File.directory?(package_path) ? package_path : nil
+  def installed_path(hash)
+    File.join(@installed_cache_dir, hash[0..1], hash[2..3], hash[4..-1])
   end
 end
