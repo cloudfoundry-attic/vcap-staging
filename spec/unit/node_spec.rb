@@ -220,40 +220,27 @@ describe "A Node.js app with dependencies being staged" do
     package_info["version"].should eql(version)
   end
 
-  describe "with a patched dependency and no shrinkwrap.json" do
+  describe "with no npm-shrinkwrap.json" do
     before do
-      app_fixture :node_deps_patched
+      app_fixture :node_deps_no_shrinkwrap
     end
 
-    it "does not overwrite user's module" do
+    it "skips npm support" do
       stage node_staging_env do |staged_dir|
         pending_unless_npm_provided("node")
-        patched_file = File.join(staged_dir, "app", "node_modules", "colors", "patched.js")
-        File.exists?(patched_file).should be_true
+        log_file = File.join(staged_dir, "logs", "staging.log")
+        log_contents = File.read(log_file)
+        log_contents.should match /Skipping npm support: npm-shrinkwrap.json is not provided/
       end
     end
   end
 
-  describe "with a patched dependency and shrinkwrap" do
-    before do
-      app_fixture :node_deps_installed
-    end
-
-    it "does not overwrite user's module" do
-      stage node_staging_env do |staged_dir|
-        pending_unless_npm_provided("node")
-        patched_file = File.join(staged_dir, "app", "node_modules", "colors", "patched.js")
-        File.exists?(patched_file).should be_true
-      end
-    end
-  end
-
-  describe "with shrinkwrap and no node module" do
+  describe "with npm-shrinkwrap.json and no node module" do
     before do
       app_fixture :node_deps_shrinkwrap
     end
 
-    it "module will be installed with version specified in shrinkwrap" do
+    it "module will be installed with version specified in npm-shrinkwrap.json" do
       stage node_staging_env do |staged_dir|
         pending_unless_npm_provided("node")
         package_dir = File.join(staged_dir, "app", "node_modules", "colors")
@@ -262,28 +249,11 @@ describe "A Node.js app with dependencies being staged" do
         package_info["version"].should eql("0.5.0")
       end
     end
-  end
 
-  describe "with shrinkwrap, node module and cloudfoundry.json" do
-    before do
-      app_fixture :node_deps_ignore
-    end
-
-    it "module will be overwritten with version specified in shrinkwrap" do
-      stage node_staging_env do |staged_dir|
-        pending_unless_npm_provided("node")
-        package_dir = File.join(staged_dir, "app", "node_modules", "colors")
-        patched_file = File.join(package_dir, "patched.js")
-        File.exists?(patched_file).should_not be_true
-        package_info = package_config(package_dir)
-        package_info["version"].should eql("0.5.0")
-      end
-    end
-
-    it "uses cache" do
+    it "uses fetched cache" do
       cached_package = File.join(StagingPlugin.platform_config["cache"],
-                                 "node_modules/06/npm_cache/colors/0.5.0/package")
-      pending "this test depends on the previous" unless File.exists?(cached_package)
+                                 "npm_cache/fetched/colors/0.5.0/package")
+      FileUtils.mkdir_p(cached_package)
       patched_cache_file = File.join(cached_package, "cached.js")
       FileUtils.touch(patched_cache_file)
       stage node_staging_env do |staged_dir|
@@ -295,17 +265,44 @@ describe "A Node.js app with dependencies being staged" do
     end
   end
 
-  describe "with native dependencies" do
+  describe "with npm-shrinkwrap.json and native dependencies" do
     before do
       app_fixture :node_deps_native
     end
 
-    it "module will be rebuild" do
+    it "installs extensions" do
       stage node_staging_env do |staged_dir|
         pending_unless_npm_provided("node")
         package_dir = File.join(staged_dir, "app", "node_modules", "bcrypt")
         built_package = File.join(package_dir, "build", "Release", "bcrypt_lib.node")
         File.exist?(built_package).should be_true
+      end
+    end
+
+    it "builds user provided module" do
+      stage node_staging_env do |staged_dir|
+        pending_unless_npm_provided("node")
+        package_dir = File.join(staged_dir, "app", "node_modules", "bcrypt")
+        patched_file = File.join(package_dir, "patched.js")
+        File.exists?(patched_file).should be_true
+      end
+    end
+
+    it "uses installed cache" do
+      begin
+        cached_package = File.join(StagingPlugin.platform_config["cache"],
+                                   "npm_cache/installed/06/61/34/03b9837acdb73235198e0101d0bd11b61dfb")
+        FileUtils.mkdir_p(cached_package)
+        patched_cache_file = File.join(cached_package, "cached.js")
+        FileUtils.touch(patched_cache_file)
+        stage node_staging_env do |staged_dir|
+          pending_unless_npm_provided("node")
+          package_dir = File.join(staged_dir, "app", "node_modules", "bcrypt")
+          cached_file = File.join(package_dir, "cached.js")
+          File.exists?(cached_file).should be_true
+        end
+      ensure
+        FileUtils.rm_rf(cached_package)
       end
     end
   end

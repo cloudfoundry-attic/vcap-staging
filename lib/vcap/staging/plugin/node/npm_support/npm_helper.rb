@@ -1,3 +1,5 @@
+require "shellwords"
+
 class NpmHelper
 
   attr_accessor :npm_version
@@ -36,22 +38,36 @@ class NpmHelper
     cmd = "--production true --color false --loglevel error --non-global true --force true"
     cmd += " --user #{@uid}" if @uid
     cmd += " --group #{@gid}" if @gid
+    cmd
   end
 
   def build_cmd(where)
-    "#{npm_cmd} build #{where} #{npm_flags}"
+    "#{npm_cmd} build #{where} #{npm_flags} 2>&1"
   end
 
   def install_cmd(package, where, cache_dir, tmp_dir)
-    "#{npm_cmd} install #{package} --prefix #{where} #{npm_flags} " +
+    "#{npm_cmd} install #{shellescape(package)} --prefix #{where} #{npm_flags} " +
       "--cache #{cache_dir} --tmp #{tmp_dir} --node_version #{@node_version} " +
       "--registry http://registry.npmjs.org/"
   end
 
-  def versioner_cmd(package_link)
+  def versioner_cmd(node_range, npm_range)
     versioner_path = File.expand_path("../../resources/versioner/versioner.js", __FILE__)
-    "#{node_safe_env} #{@node_path} #{versioner_path} " +
-    "--package=#{package_link} --node-version=#{@node_version} " +
-    "--npm-version=#{@npm_version}"
+    "#{node_safe_env} #{@node_path} #{versioner_path} --node-range=#{shellescape(node_range.to_s)}" +
+    " --npm-range=#{shellescape(npm_range.to_s)} --node-version=#{shellescape(@node_version)}" +
+    " --npm-version=#{@npm_version}"
+  end
+
+  def fetch_cmd(source, dst)
+    "wget --quiet --retry-connrefused --connect-timeout=5 " +
+    "--no-check-certificate --output-document=#{dst} #{shellescape(source)}"
+  end
+
+  def unpack_cmd(what, where)
+    "tar xzf #{what} --directory=#{where} --strip-components=1 2>&1"
+  end
+
+  def shellescape(word)
+    Shellwords.escape(word)
   end
 end
