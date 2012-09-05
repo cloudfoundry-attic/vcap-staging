@@ -9,48 +9,51 @@ require File.expand_path("../../../git_cache", __FILE__)
 module NpmSupport
 
   # If there is no npm-shwrinkwrap.json file don't do anything
-  # If user has node_modules folder and config option "ignoreNodeModules"
-  # in cloudfoundry.json is not set don't do anything
-  # Otherwise, install node modules according to shwrinkwrap.json tree
+  # Otherwise, install node modules according to npm-shwrinkwrap.json tree
   #
   # For each dependency in shrinkwrap tree recursively:
-  # - Get from cache by name & version
-  # - If not in cache, fetch it, run npm rebuild, put in cache
+  # - If user provided module in node_modules folder
+  #   - and it does not have native extensions skip it
+  #   - and it has native extensions build it checking installed cache
+  # - If module is not provided fetch it from registry checking fetched cache
+  # or get from git cache
+  #   - build it if it has native extensions checking installed cache
+  #   - put it in node_modules folder according to npm-shrinkwrap.json tree
 
   def compile_node_modules
     # npm provided?
     return unless runtime[:npm]
 
+    if @vcap_config["ignoreNodeModules"]
+      logger.warn("ignoreNodeModules in cloudfoundry.json is deprecated")
+    end
+
     @dependencies = get_dependencies
-    return unless should_install_packages?
+    return unless @dependencies
 
     @npm_helper = NpmHelper.new(runtime[:executable], runtime[:version], runtime[:npm],
                                 @secure_uid, @secure_gid)
     return unless @npm_helper.npm_version
 
     cache_base_dir = StagingPlugin.platform_config["cache"]
-    FileUtils.mkdir_p File.join(cache_base_dir, "node_modules")
-    cache_version_dir  = File.join(cache_base_dir, "node_modules", library_version)
-    @cache = NpmCache.new(cache_version_dir, logger)
 
-    @git_cache = GitCache.new(File.join(cache_base_dir, "git_cache"),
-                              File.join(cache_version_dir, "git_cache"), logger)
+    # Remove old caching directory
+    FileUtils.rm_rf(File.join(cache_base_dir, "node_modules"))
+
+    npm_cache_base_dir = File.join(cache_base_dir, "npm_cache")
+    FileUtils.mkdir_p(File.join(npm_cache_base_dir))
+
+    @cache = NpmCache.new(npm_cache_base_dir, library_version, logger)
+    @git_cache = GitCache.new(File.join(cache_base_dir, "git_cache"), nil, logger)
+
     logger.info("Installing dependencies. Node version #{runtime[:version]}")
     install_packages(@dependencies, app_directory)
   end
 
-  def should_install_packages?
-    return unless @dependencies
-
-    return true if @vcap_config["ignoreNodeModules"]
-
-    user_packages_dir = File.join(app_directory, "node_modules")
-    !File.exists?(user_packages_dir)
-  end
-
   def install_packages(dependencies, where)
     dependencies.each do |name, props|
-      package = NpmPackage.new(name, props, where, @staging_uid,
+      package_path = File.join(where, "node_modules", name)
+      package = NpmPackage.new(name, props, package_path, @staging_uid,
                                @staging_gid, @npm_helper, logger, @cache, @git_cache)
       installed_dir = package.install
       if installed_dir && props["dependencies"].is_a?(Hash)
@@ -61,7 +64,10 @@ module NpmSupport
 
   def get_dependencies
     shrinkwrap_file = File.join(app_directory, "npm-shrinkwrap.json")
-    return unless File.exists?(shrinkwrap_file)
+    unless File.exists?(shrinkwrap_file)
+      logger.info("Skipping npm support: npm-shrinkwrap.json is not provided")
+      return nil
+    end
     shrinkwrap_config = Yajl::Parser.parse(File.new(shrinkwrap_file, "r"))
     if shrinkwrap_config.is_a?(Hash) && shrinkwrap_config["dependencies"].is_a?(Hash)
       shrinkwrap_config["dependencies"]
