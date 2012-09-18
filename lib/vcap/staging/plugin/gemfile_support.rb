@@ -30,7 +30,6 @@ module GemfileSupport
     safe_env << " LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8"
     base_dir = StagingPlugin.platform_config["cache"]
 
-    app_dir  = File.join(destination_directory, 'app')
     ruby_cmd = "env -i #{safe_env} #{ruby}"
 
     @task = GemfileTask.new(app_dir, library_version, ruby_cmd, base_dir,

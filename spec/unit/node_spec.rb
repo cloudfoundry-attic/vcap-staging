@@ -24,6 +24,7 @@ describe "A simple Node.js app being staged" do
       script_body = File.read(start_script)
       script_body.should == <<-EXPECTED
 #!/bin/bash
+export TMPDIR="$PWD/tmp"
 cd app
 %VCAP_LOCAL_RUNTIME% $NODE_ARGS autoconfig.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
@@ -56,6 +57,7 @@ describe "A Node.js app with auto-config options being staged" do
         script_body = File.read(start_script)
         script_body.should == <<-EXPECTED
 #!/bin/bash
+export TMPDIR="$PWD/tmp"
 cd app
 %VCAP_LOCAL_RUNTIME% $NODE_ARGS app.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
@@ -79,6 +81,7 @@ EXPECTED
         script_body = File.read(start_script)
         script_body.should == <<-EXPECTED
 #!/bin/bash
+export TMPDIR="$PWD/tmp"
 cd app
 %VCAP_LOCAL_RUNTIME% $NODE_ARGS app.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
@@ -124,6 +127,7 @@ EXPECTED
         script_body = File.read(start_script)
         script_body.should == <<-EXPECTED
 #!/bin/bash
+export TMPDIR="$PWD/tmp"
 cd app
 %VCAP_LOCAL_RUNTIME% $NODE_ARGS autoconfig.js ./bin/app.coffee World $@ > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!

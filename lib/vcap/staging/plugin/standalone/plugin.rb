@@ -19,9 +19,6 @@ class StandalonePlugin < StagingPlugin
     if runtime[:name] =~ /\Aruby/
       compile_gems
       install_autoconfig_gem if autoconfig_enabled?
-    elsif runtime[:name] =~ /\Ajava/
-      #Make a temp dir for java.io.tmpdir
-      FileUtils.mkdir_p File.join(destination_directory, 'temp')
     end
   end
 
@@ -68,7 +65,7 @@ class StandalonePlugin < StagingPlugin
 
   def java_startup_script
     vars = {}
-    java_sys_props = "-Djava.io.tmpdir=$PWD/temp"
+    java_sys_props = "-Djava.io.tmpdir=$PWD/tmp"
     vars['JAVA_OPTS'] = "$JAVA_OPTS -Xms#{application_memory}m -Xmx#{application_memory}m #{java_sys_props}"
     generate_startup_script(vars)
   end
