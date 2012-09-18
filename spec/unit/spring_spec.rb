@@ -20,6 +20,7 @@ describe "A Spring application being staged" do
       script_body.should == <<-EXPECTED
 #!/bin/bash
 export CATALINA_OPTS="-Xms512m -Xmx512m"
+export TMPDIR="$PWD/tmp"
 export CATALINA_OPTS="$CATALINA_OPTS `ruby resources/set_environment`"
 env > env.log
 PORT=-1
@@ -52,6 +53,7 @@ wait $STARTED
       script_body.should == <<-EXPECTED
 #!/bin/bash
 export CATALINA_OPTS="-Xms256m -Xmx256m"
+export TMPDIR="$PWD/tmp"
 export CATALINA_OPTS="$CATALINA_OPTS `ruby resources/set_environment`"
 env > env.log
 PORT=-1

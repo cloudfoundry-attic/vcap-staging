@@ -15,6 +15,7 @@ describe "A simple Sinatra app being staged" do
 #!/bin/bash
 export RACK_ENV="${RACK_ENV:-production}"
 export RUBYOPT="-rubygems -I$PWD/ruby -rstdsync"
+export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app
@@ -53,6 +54,7 @@ export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RACK_ENV="${RACK_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rstdsync"
+export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app

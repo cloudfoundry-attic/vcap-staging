@@ -46,7 +46,8 @@ class JavaWebPlugin < StagingPlugin
   end
 
   def create_app_directories
-    FileUtils.mkdir_p File.join(destination_directory, 'logs')
+    FileUtils.mkdir_p(log_dir)
+    FileUtils.mkdir_p(tmp_dir)
   end
 
   # The Tomcat start script runs from the root of the staged application.

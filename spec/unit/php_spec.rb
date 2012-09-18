@@ -15,6 +15,7 @@ describe "A PHP application being staged" do
       script_body = File.read(start_script)
       script_body.should == <<-EXPECTED
 #!/bin/bash
+export TMPDIR="$PWD/tmp"
 env > env.log
 ruby resources/generate_apache_conf $VCAP_APP_PORT $HOME $VCAP_SERVICES 512m
 cd apache
@@ -33,6 +34,7 @@ wait $STARTED
       script_body = File.read(start_script)
       script_body.should == <<-EXPECTED
 #!/bin/bash
+export TMPDIR="$PWD/tmp"
 env > env.log
 ruby resources/generate_apache_conf $VCAP_APP_PORT $HOME $VCAP_SERVICES 256m
 cd apache

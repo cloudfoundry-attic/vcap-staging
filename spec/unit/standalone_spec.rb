@@ -19,6 +19,7 @@ export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
 export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
+export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app
@@ -62,6 +63,7 @@ export GEM_HOME="$PWD/app/rubygems/ruby/1.9.1"
 export GEM_PATH="$PWD/app/rubygems/ruby/1.9.1"
 export PATH="$PWD/app/rubygems/ruby/1.9.1/bin:$PATH"
 export RUBYOPT="-I$PWD/ruby  -rcfautoconfig -rstdsync"
+export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app
@@ -109,6 +111,7 @@ gem "cf-autoconfig"
           script_body.should == <<-EXPECTED
 #!/bin/bash
 export RUBYOPT="-rubygems -I$PWD/ruby -rstdsync"
+export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app
@@ -129,6 +132,7 @@ wait $STARTED
           script_body.should == <<-EXPECTED
 #!/bin/bash
 export RUBYOPT="-rubygems -I$PWD/ruby -rstdsync"
+export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app
@@ -153,7 +157,8 @@ wait $STARTED
           script_body = File.read(start_script)
           script_body.should == <<-EXPECTED
 #!/bin/bash
-export JAVA_OPTS="$JAVA_OPTS -Xms512m -Xmx512m -Djava.io.tmpdir=$PWD/temp"
+export JAVA_OPTS="$JAVA_OPTS -Xms512m -Xmx512m -Djava.io.tmpdir=$PWD/tmp"
+export TMPDIR="$PWD/tmp"
 cd app
 java $JAVA_OPTS HelloWorld > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
@@ -164,7 +169,7 @@ wait $STARTED
     end
     it "creates a temp dir" do
       stage({:framework_info => {:name => "standalone"}, :meta=>{:command=> "java $JAVA_OPTS HelloWorld"}, :runtime_info=> {:name => "java"}, :resources=>{:memory=>512}}) do |staged_dir|
-          tmp_dir = File.join(staged_dir, 'temp')
+          tmp_dir = File.join(staged_dir, "tmp")
           File.exists?(tmp_dir).should == true
         end
     end
@@ -182,6 +187,7 @@ wait $STARTED
           script_body.should == <<-EXPECTED
 #!/bin/bash
 export PYTHONUNBUFFERED="true"
+export TMPDIR="$PWD/tmp"
 cd app
 python HelloWorld.py > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
