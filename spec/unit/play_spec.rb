@@ -12,8 +12,9 @@ describe "A Play app being staged" do
       script_body = File.read(start_script)
       script_body.should == <<-EXPECTED
 #!/bin/bash
+export TMPDIR="$PWD/tmp"
 cd app
-./start -Xms256m -Xmx256m -Dhttp.port=$VCAP_APP_PORT $JAVA_OPTS > ../logs/stdout.log 2> ../logs/stderr.log &
+./start -Xms256m -Xmx256m -Dhttp.port=$VCAP_APP_PORT -Djava.io.tmpdir=$PWD/tmp $JAVA_OPTS > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
 echo "$STARTED" >> ../run.pid
 wait $STARTED

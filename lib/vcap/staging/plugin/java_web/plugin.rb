@@ -46,7 +46,8 @@ class JavaWebPlugin < StagingPlugin
   end
 
   def create_app_directories
-    FileUtils.mkdir_p File.join(destination_directory, 'logs')
+    FileUtils.mkdir_p(log_dir)
+    FileUtils.mkdir_p(tmp_dir)
   end
 
   # The Tomcat start script runs from the root of the staged application.
@@ -61,8 +62,9 @@ class JavaWebPlugin < StagingPlugin
   end
 
   def configure_catalina_opts
+    java_sys_props = "-Djava.io.tmpdir=$PWD/tmp"
     # We want to set this to what the user requests, *not* set a minum bar
-    "-Xms#{application_memory}m -Xmx#{application_memory}m"
+    "-Xms#{application_memory}m -Xmx#{application_memory}m #{java_sys_props}"
   end
 
   private

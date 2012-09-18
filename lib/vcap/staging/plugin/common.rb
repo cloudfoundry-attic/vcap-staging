@@ -135,8 +135,16 @@ class StagingPlugin
     end
   end
 
+  def app_dir
+    File.join(destination_directory, "app")
+  end
+
   def log_dir
-    File.join(destination_directory, 'logs')
+    File.join(destination_directory, "logs")
+  end
+
+  def tmp_dir
+    File.join(destination_directory, "tmp")
   end
 
   def framework
@@ -234,6 +242,9 @@ echo "$STARTED" >> ../run.pid
   # Generates newline-separated exports for the specified environment variables.
   # If the value of one of the keys is false or nil, it will be an 'unset' instead of an 'export'
   def environment_statements_for(vars)
+    # Passed vars should overwrite common vars
+    common_env_vars = { "TMPDIR" => "$PWD/tmp" }
+    vars = common_env_vars.merge(vars)
     lines = []
     vars.each do |name, value|
       if value
@@ -246,8 +257,9 @@ echo "$STARTED" >> ../run.pid
   end
 
   def create_app_directories
-    FileUtils.mkdir_p File.join(destination_directory, 'app')
-    FileUtils.mkdir_p File.join(destination_directory, 'logs')
+    FileUtils.mkdir_p(app_dir)
+    FileUtils.mkdir_p(log_dir)
+    FileUtils.mkdir_p(tmp_dir)
   end
 
   def create_stop_script()
@@ -267,7 +279,7 @@ echo "$STARTED" >> ../run.pid
   end
 
   def copy_source_files(dest = nil)
-    dest ||= File.join(destination_directory, 'app')
+    dest ||= app_dir
     system "cp -a #{File.join(source_directory, "*")} #{dest}"
   end
 
@@ -285,7 +297,6 @@ echo "$STARTED" >> ../run.pid
   # e.g. [sinatra_app.rb, lib/somefile.rb]
   def app_files_matching_patterns
     matching = []
-    app_dir = File.join(destination_directory, 'app')
     detection_rules.each do |rule|
       rule.each do |glob, pattern|
         next unless String === pattern

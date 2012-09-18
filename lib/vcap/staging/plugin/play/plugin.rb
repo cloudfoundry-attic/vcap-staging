@@ -36,7 +36,9 @@ class PlayPlugin < StagingPlugin
   end
 
   def start_command
-    "./start -Xms#{application_memory}m -Xmx#{application_memory}m -Dhttp.port=$VCAP_APP_PORT $JAVA_OPTS"
+    java_opts = "-Xms#{application_memory}m -Xmx#{application_memory}m"
+    java_opts += " -Dhttp.port=$VCAP_APP_PORT -Djava.io.tmpdir=$PWD/tmp"
+    "./start #{java_opts} $JAVA_OPTS"
   end
 
   def startup_script
