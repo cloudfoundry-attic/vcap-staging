@@ -259,7 +259,7 @@ class NpmPackage
     FileUtils.rm_rf(File.join(where, "build"))
     FileUtils.rm_rf(File.join(where, "node_modules"))
     pattern = File.join("**", "*.{node,o}")
-    Dir.glob(File.join(where, pattern)) { |file| File.rm_f(file) }
+    Dir.glob(File.join(where, pattern)) { |file| FileUtils.rm_f(file) }
   end
 
   # Generate consistent hash of the directory
