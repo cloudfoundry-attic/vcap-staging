@@ -162,7 +162,7 @@ class NpmPackage
     FileUtils.rm_rf(@package_path)
     FileUtils.mkdir_p(File.dirname(@package_path))
     begin
-      FileUtils.copy_entry(source, @package_path)
+      FileUtils.copy_entry(source, @package_path, true)
       return true
     rescue => e
       @logger.debug("Failed copying module to application #{e.message}")

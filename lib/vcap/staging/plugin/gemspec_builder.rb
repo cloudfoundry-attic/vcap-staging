@@ -33,7 +33,7 @@ class GemspecBuilder
   end
 
   def update_from_path(new_gemspec)
-    FileUtils.copy_entry(new_gemspec, @gemspec_path)
+    FileUtils.copy_entry(new_gemspec, @gemspec_path, true)
   rescue
     @logger.error "Failed updating gemspec #{@gemspec_path}"
   end

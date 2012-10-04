@@ -226,7 +226,7 @@ class GemfileTask
     return unless src && File.exists?(src)
     FileUtils.mkdir_p(dest)
     begin
-      FileUtils.copy_entry(src, dest)
+      FileUtils.copy_entry(src, dest, true)
     rescue
       @logger.error "Failed copying gem to #{dest}"
     end
