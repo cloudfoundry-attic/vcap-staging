@@ -8,7 +8,7 @@ describe "GemspecBuilder" do
     @logger = double("Logger").as_null_object
     git_gems_dir = app_fixture_base_directory.join("sinatra_git", "test_gem")
     @working_dir = Dir.mktmpdir
-    FileUtils.copy_entry(git_gems_dir, @working_dir)
+    FileUtils.copy_entry(git_gems_dir, @working_dir, true)
   end
 
   after :each do

@@ -1,4 +1,4 @@
-require "shellwords"
+require File.expand_path("../../../secure_operations", __FILE__)
 
 module NpmHelper
   def get_npm_version
@@ -56,9 +56,5 @@ module NpmHelper
     cmd = "tar xzf #{what} --directory=#{where} --strip-components=1 2>&1"
     `#{cmd}`
     $?.exitstatus
-  end
-
-  def shellescape(word)
-    Shellwords.escape(word)
   end
 end

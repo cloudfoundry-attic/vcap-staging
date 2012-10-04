@@ -1,7 +1,6 @@
 require "fileutils"
 require "uri"
 require "net/http"
-require File.expand_path("../../../secure_operations", __FILE__)
 require File.expand_path("../npm_helper", __FILE__)
 
 # Node module class
@@ -84,7 +83,11 @@ class NpmPackage
   def install_copy_from_path(package_path)
     begin
       tmp_dir = Dir.mktmpdir
-      FileUtils.copy_entry(package_path, tmp_dir, true, nil, true)
+      `cp -a #{shellescape(package_path)}/. #{tmp_dir}`
+      if $?.exitstatus != 0
+        @logger.debug("Failed copying gem from path")
+        return nil
+      end
       install_from_path(tmp_dir)
     ensure
       FileUtils.rm_rf(tmp_dir)
@@ -160,14 +163,11 @@ class NpmPackage
   def copy_to_dst(source)
     return unless source && File.exists?(source)
     FileUtils.rm_rf(@package_path)
-    FileUtils.mkdir_p(File.dirname(@package_path))
-    begin
-      FileUtils.copy_entry(source, @package_path)
-      return true
-    rescue => e
-      @logger.debug("Failed copying module to application #{e.message}")
-      return false
-    end
+    FileUtils.mkdir_p(@package_path)
+    `cp -a #{shellescape(source)}/. #{shellescape(@package_path)}`
+    exitstatus = $?.exitstatus
+    @logger.error("Failed copying module to application") if exitstatus != 0
+    exitstatus == 0
   end
 
   def build(where)

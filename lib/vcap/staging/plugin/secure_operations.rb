@@ -1,3 +1,5 @@
+require "shellwords"
+
 # This module contains methods for performing tasks and
 # setting file permissions/ownership using a secure user
 # Classes including this module should set the instance variable
@@ -86,5 +88,9 @@ module SecureOperations
   def secure_group
     group_name = `awk -F: '{ if ( $3 == #{@gid} ) { print $1 } }' /etc/group`
     group_name.chomp
+  end
+
+  def shellescape(word)
+    Shellwords.escape(word)
   end
 end

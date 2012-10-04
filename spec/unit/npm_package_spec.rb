@@ -53,7 +53,7 @@ describe NpmPackage do
     # copy_to_dst
     app_source = app_fixture_base_directory.join("node_deps_native", "source")
     app_test = File.join(@working_dir, "app")
-    FileUtils.copy_entry(app_source, app_test)
+    FileUtils.copy_entry(app_source, app_test, true)
     package_path = File.join(app_test, "node_modules", "bcrypt")
 
     module_test = File.join(@working_dir, "module")

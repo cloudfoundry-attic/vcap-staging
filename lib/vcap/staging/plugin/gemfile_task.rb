@@ -225,11 +225,10 @@ class GemfileTask
     unsecure_file(src)
     return unless src && File.exists?(src)
     FileUtils.mkdir_p(dest)
-    begin
-      FileUtils.copy_entry(src, dest)
-    rescue
-      @logger.error "Failed copying gem to #{dest}"
-    end
+    `cp -a #{shellescape(src)}/. #{shellescape(dest)}`
+    exitstatus = $?.exitstatus
+    @logger.error("Failed copying gem to #{dest}") if exitstatus != 0
+    exitstatus == 0
   end
 
   def installation_directory
