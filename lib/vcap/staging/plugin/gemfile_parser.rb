@@ -41,8 +41,8 @@ def build_spec_list(dependencies, locked_specs, specs)
   locked_specs.each do |spec|
     if dependency_names.include? spec.name
       if !specs.include? spec
-        specs << spec
         build_spec_list(spec.dependencies, locked_specs, specs)
+        specs << spec
       end
     end
   end

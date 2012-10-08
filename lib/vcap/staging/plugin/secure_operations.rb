@@ -47,11 +47,21 @@ module SecureOperations
   # Change permissions and ownership of specified file
   # to secure user, if @uid is set
   def secure_file(file)
+    secure_chmod(file)
+    secure_chown(file)
+  end
+
+  def secure_chmod(file)
     if @uid
       chmod_output = `/bin/chmod -R 0755 #{file} 2>&1`
       if $?.exitstatus != 0
         raise "Failed chmodding dir: #{chmod_output}"
       end
+    end
+  end
+
+  def secure_chown(file)
+    if @uid
       chown_user = @gid ? "#{@uid}:#{@gid}" : @uid
       chown_output = `sudo /bin/chown -R #{chown_user} #{file} 2>&1`
       if $?.exitstatus != 0

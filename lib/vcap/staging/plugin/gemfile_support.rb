@@ -28,9 +28,13 @@ module GemfileSupport
     safe_env << " PATH='#{path}'"
 
     safe_env << " LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8"
-    base_dir = StagingPlugin.platform_config["cache"]
+
+    gem_path = File.join(app_dir, "rubygems", "ruby", library_version)
+    safe_env << " GEM_PATH='#{gem_path}'"
 
     ruby_cmd = "env -i #{safe_env} #{ruby}"
+
+    base_dir = StagingPlugin.platform_config["cache"]
 
     @task = GemfileTask.new(app_dir, library_version, ruby_cmd, base_dir,
      {:bundle_without=>bundle_without}, @staging_uid, @staging_gid)
