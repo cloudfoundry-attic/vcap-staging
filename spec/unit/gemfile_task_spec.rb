@@ -17,6 +17,29 @@ describe "GemfileTask" do
     FileUtils.rm_rf(@git_working_dir)
   end
 
+  describe "Sinatra app with Gemfile.lock" do
+    before :each do
+      test_app = app_fixture_base_directory.join("sinatra_gemfile", "source")
+      FileUtils.cp_r(File.join(test_app, "."), @app_dir)
+      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir)
+    end
+
+    it "should return specs in the order where dependent gems go first" do
+      # rack and tilt should go before sinatra
+      sinatra_deps = ["rack", "tilt"]
+      found_deps = []
+      @task.specs.each do |spec|
+        found_deps << spec[:name] if sinatra_deps.include?(spec[:name])
+        if spec[:name] == "sinatra"
+          sinatra_deps.each do |dep|
+            found_deps.should include dep
+          end
+        end
+      end
+    end
+
+  end
+
   describe "Sinatra app with git dependencies" do
     before :each do
       test_app = app_fixture_base_directory.join("sinatra_git", "source")
