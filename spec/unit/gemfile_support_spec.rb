@@ -255,6 +255,25 @@ describe 'An app being staged with a Gemfile.lock created on Windows' do
     end
   end
 end
+
+describe "An app being staged with gems that depend on other gems" do
+  before do
+    app_fixture :sinatra_dep_gems
+  end
+
+  it "installs all gems" do
+    stage sinatra_staging_env.merge({:runtime_info => {:name => "ruby19", :version => "1.9.2p180",
+        :description => "Ruby 1.9.2", :executable => "ruby"}}) do |staged_dir|
+      platform_specific_gem = "libv8-3.3.10.4-#{Gem::Platform.local.to_s}"
+      Dir.chdir(File.join(staged_dir,'app', 'rubygems', 'ruby', '1.9.1','gems')) do
+        Dir.glob('*').sort.should == ["bundler-1.1.3", "cf-autoconfig-0.0.4", "cf-runtime-0.0.2",
+          platform_specific_gem, "rack-1.4.1", "rack-protection-1.2.0", "sinatra-1.3.3",
+          "therubyracer-0.10.2", "tilt-1.3.3"]
+      end
+    end
+  end
+end
+
 def sinatra_staging_env
   {:runtime_info => {
      :name => "ruby18",

@@ -15,7 +15,7 @@ class GemfileTask
     @blessed_gems_dir = File.join(@cache_base_dir, "blessed_gems")
     FileUtils.mkdir_p(@blessed_gems_dir)
 
-    @ruby_cmd = ruby_cmd
+    @ruby_cmd = ruby_cmd.gsub("%GEM_PATH%", installation_directory)
     @uid = uid
     @gid = gid
     @options = options
@@ -54,7 +54,7 @@ class GemfileTask
   end
 
   def install
-   install_specs(specs)
+    install_specs(specs)
   end
 
   def remove_gems_cached_in_app
@@ -113,7 +113,7 @@ class GemfileTask
       else
         @logger.info("Need to fetch #{gem_filename} from RubyGems")
         Dir.mktmpdir do |tmp_dir|
-          fetched_path = fetch_gem_from_rubygems(name, version, tmp_dir)
+          fetched_path = get_gem_from_rubygems(name, version, tmp_dir)
           installed_path = install_gem_from_path(gem_filename, fetched_path, "fetched")
           save_blessed_gem(fetched_path)
         end
@@ -235,24 +235,34 @@ class GemfileTask
     File.join(@app_dir, "rubygems", "ruby", @library_version)
   end
 
-  def fetch_gem_from_rubygems(name, version, directory)
-    url = rubygems_url_for(name, version)
-    gem_filename = gem_filename(name, version)
-    cmd = "wget --quiet --retry-connrefused --connect-timeout=5 --no-check-certificate #{url}"
-
+  def get_gem_from_rubygems(name, version, directory)
+    # Try to fetch platform specific gem first
+    gem_filename = gem_filename_platform(name, version)
     Dir.chdir(directory) do
-      raise "Failed fetching missing gem #{gem_filename} from Rubygems" unless system(cmd)
+      unless fetch_gem_from_rubygems(gem_filename)
+
+        gem_filename = gem_filename(name, version)
+        unless fetch_gem_from_rubygems(gem_filename)
+          raise "Failed fetching missing gem #{gem_filename} from Rubygems"
+        end
+      end
     end
 
     File.join(directory, gem_filename)
+  end
+
+  def fetch_gem_from_rubygems(gem_filename)
+    url = "http://production.s3.rubygems.org/gems/#{gem_filename}"
+    cmd = "wget --quiet --retry-connrefused --connect-timeout=5 --no-check-certificate #{url}"
+    system(cmd)
   end
 
   def gem_filename(name, version)
     "%s-%s.gem" % [ name, version ]
   end
 
-  def rubygems_url_for(name, version)
-    "http://production.s3.rubygems.org/gems/#{name}-#{version}.gem"
+  def gem_filename_platform(name, version)
+    "%s-%s-%s.gem" % [ name, version, Gem::Platform.local.to_s ]
   end
 
   # Stage the gemfile in a temporary directory that is readable by a secure user
@@ -301,7 +311,16 @@ class GemfileTask
 
     @logger.debug("Doing a gem install from #{staged_gemfile} into #{gem_install_dir} as user #{@uid || 'cc'}")
     staging_cmd = "#{@ruby_cmd} -S gem install #{staged_gemfile} --local --no-rdoc --no-ri -E -w -f --ignore-dependencies --install-dir #{gem_install_dir}"
-    exitstatus, _ = run_secure(staging_cmd, tmp_dir)
-    exitstatus == 0 ? gem_install_dir : nil
+
+    begin
+      # Give access to gem path for gem installation
+      app_staged_dir = File.dirname(File.dirname(@app_dir))
+      secure_chown(app_staged_dir)
+
+      exitstatus, _ = run_secure(staging_cmd, tmp_dir)
+      return exitstatus == 0 ? gem_install_dir : nil
+    ensure
+      unsecure_file(app_staged_dir)
+    end
   end
 end
