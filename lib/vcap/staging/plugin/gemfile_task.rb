@@ -8,11 +8,11 @@ require File.expand_path('../gemspec_builder', __FILE__)
 class GemfileTask
   include SecureOperations
 
-  def initialize(app_dir, library_version, ruby_cmd, base_dir, options={}, uid=nil, gid=nil)
+  def initialize(app_dir, library_version, ruby_cmd, base_dir, ruby_version, options={}, uid=nil, gid=nil)
     @app_dir          = File.expand_path(app_dir)
     @library_version  = library_version
-    @cache_base_dir   = File.join(base_dir, @library_version)
-    @blessed_gems_dir = File.join(@cache_base_dir, "blessed_gems")
+    @cache_base_dir   = File.join(base_dir, ruby_version)
+    @blessed_gems_dir = File.join(base_dir, "blessed_gems")
     FileUtils.mkdir_p(@blessed_gems_dir)
 
     @ruby_cmd = ruby_cmd.gsub("%GEM_PATH%", installation_directory)
