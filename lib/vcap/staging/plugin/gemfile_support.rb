@@ -33,7 +33,7 @@ module GemfileSupport
     ruby_cmd = "env -i #{safe_env} #{ruby}"
 
     @task = GemfileTask.new(app_dir, library_version, ruby_cmd, base_dir,
-     {:bundle_without=>bundle_without}, @staging_uid, @staging_gid)
+     runtime[:version], {:bundle_without=>bundle_without}, @staging_uid, @staging_gid)
 
     @task.install
     @task.install_bundler
@@ -45,7 +45,7 @@ module GemfileSupport
   end
 
   def library_version
-    runtime[:name] == "ruby19" ? "1.9.1" : "1.8"
+    runtime[:version] =~ /\A1\.9/ ? "1.9.1" : "1.8"
   end
 
   def bundle_without
