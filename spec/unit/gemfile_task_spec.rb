@@ -21,7 +21,7 @@ describe "GemfileTask" do
     before :each do
       test_app = app_fixture_base_directory.join("sinatra_gemfile", "source")
       FileUtils.cp_r(File.join(test_app, "."), @app_dir)
-      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir)
+      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir, "1.9.2p180")
     end
 
     it "should return specs in the order where dependent gems go first" do
@@ -47,7 +47,7 @@ describe "GemfileTask" do
 
       @git_gems = %w(eventmachine vcap_logging)
 
-      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir)
+      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir, "1.9.2p180")
     end
 
     it "should include git gems in specs" do
@@ -97,7 +97,7 @@ describe "GemfileTask" do
               :source => {:url => "url",
                           :revision => "revision",
                           :git_scope => "git_scope"}}
-      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir)
+      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir, "1.9.2p180")
       @task_git_cache = @task.instance_variable_get(:@git_cache)
       @task_git_cache.stub(:get_source) do |source, where|
         File.join(@git_working_dir, "test_gem")
