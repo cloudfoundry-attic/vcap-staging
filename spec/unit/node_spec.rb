@@ -286,7 +286,7 @@ describe "A Node.js app with dependencies being staged" do
     it "uses installed cache" do
       begin
         cached_package = File.join(StagingPlugin.platform_config["cache"],
-                                   "npm_cache/installed/0.6.8/ba/fe/758aa3dd89f04c86ad01eede60b8d52ae740")
+                                   "npm_cache/compiled/0.6.8/ba/fe/758aa3dd89f04c86ad01eede60b8d52ae740")
         FileUtils.mkdir_p(cached_package)
         patched_cache_file = File.join(cached_package, "cached.js")
         FileUtils.touch(patched_cache_file)

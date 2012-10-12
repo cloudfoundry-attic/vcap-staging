@@ -136,4 +136,36 @@ describe NpmPackage do
 
     package.build(package_path)
   end
+
+  it "fails install package if npm output has NPM ERR!" do
+    pending_unless_npm_provided
+    error_message = "Failed building package: bcrypt@0.4.0"
+    @logger.should_receive(:error).with(/#{error_message}/)
+
+
+    package = NpmPackage.new("bcrypt", {"version" => "0.4.0"},
+                             @working_dir, nil, nil, @runtime_info, @logger, @cache, @git_cache)
+
+    package.stub(:run_build) do |where|
+      [0, "npm ERR! some command not found"]
+    end
+
+    package.build(@working_dir)
+  end
+
+  it "fails install package if npm output has gyp ERR!" do
+    pending_unless_npm_provided
+    error_message = "Failed building package: bcrypt@0.4.0"
+    @logger.should_receive(:error).with(/#{error_message}/)
+
+
+    package = NpmPackage.new("bcrypt", {"version" => "0.4.0"},
+                             @working_dir, nil, nil, @runtime_info, @logger, @cache, @git_cache)
+
+    package.stub(:run_build) do |where|
+      [0, "gyp ERR! some command not found"]
+    end
+
+    package.build(@working_dir)
+  end
 end
