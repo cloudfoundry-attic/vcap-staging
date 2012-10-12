@@ -33,11 +33,12 @@ module NpmSupport
 
     cache_base_dir = StagingPlugin.platform_config["cache"]
 
-    # Remove old caching directory
-    FileUtils.rm_rf(File.join(cache_base_dir, "node_modules"))
-
     npm_cache_base_dir = File.join(cache_base_dir, "npm_cache")
     FileUtils.mkdir_p(File.join(npm_cache_base_dir))
+
+    # Delete installed caching directory as npm install exit code issue
+    # produced failed packages in cache, name was changed to compiled
+    FileUtils.rm_rf(File.join(npm_cache_base_dir, "installed"))
 
     @cache = NpmCache.new(npm_cache_base_dir, runtime[:version], logger)
     @git_cache = GitCache.new(File.join(cache_base_dir, "git_cache"), nil, logger)
