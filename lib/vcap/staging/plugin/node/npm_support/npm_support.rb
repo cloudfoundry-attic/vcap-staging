@@ -33,9 +33,6 @@ module NpmSupport
 
     cache_base_dir = StagingPlugin.platform_config["cache"]
 
-    # Remove old caching directory
-    FileUtils.rm_rf(File.join(cache_base_dir, "node_modules"))
-
     npm_cache_base_dir = File.join(cache_base_dir, "npm_cache")
     FileUtils.mkdir_p(File.join(npm_cache_base_dir))
 

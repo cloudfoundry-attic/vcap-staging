@@ -8,7 +8,7 @@ class NpmCache
 
     # installed_cache_dir contains modules with extensions after npm install
     # by module directory hash and specific node version
-    @installed_cache_dir  = File.join(base_dir, "installed", library_version)
+    @installed_cache_dir  = File.join(base_dir, "compiled", library_version)
     FileUtils.mkdir_p(@installed_cache_dir)
 
     @logger = logger
