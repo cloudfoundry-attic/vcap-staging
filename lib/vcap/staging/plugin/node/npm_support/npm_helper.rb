@@ -2,7 +2,7 @@ require File.expand_path("../../../secure_operations", __FILE__)
 
 module NpmHelper
   def get_npm_version
-    version = `#{npm_cmd} -v 2>&1`
+    version = `#{node_safe_env} #{npm_cmd} -v 2>&1`
     return version.chomp if $?.exitstatus == 0
   end
 
@@ -16,9 +16,9 @@ module NpmHelper
 
   def npm_cmd
     if @npm_path =~ /\.js$/
-      "#{node_safe_env} #{@node_path} #{@npm_path}"
+      " #{@node_path} #{@npm_path}"
     else
-      "#{node_safe_env} #{@npm_path}"
+      "#{@npm_path}"
     end
   end
 
@@ -30,8 +30,19 @@ module NpmHelper
   end
 
   def run_build(where)
-    cmd = "#{npm_cmd} build #{where} #{npm_flags} 2>&1"
-    run_secure(cmd, where, :secure_group => true)
+    Dir.mktmpdir do |tmp_dir|
+      begin
+        secure_file(tmp_dir)
+        env = node_safe_env
+        # provide HOME dir for node-gyp dev files
+        # TODO: Use --nodedir to node source
+        env << " HOME='#{tmp_dir}'"
+        cmd = "#{env} #{npm_cmd} build #{where} #{npm_flags} 2>&1"
+        return run_secure(cmd, where, :secure_group => true)
+      ensure
+        unsecure_file(tmp_dir)
+      end
+    end
   end
 
   def verify_engine_versions(node_range, npm_range)
