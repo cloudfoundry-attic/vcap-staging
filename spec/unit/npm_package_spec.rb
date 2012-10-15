@@ -168,4 +168,22 @@ describe NpmPackage do
 
     package.build(@working_dir)
   end
+
+  it "overwrites install script for old npm versions" do
+    pending_unless_npm_provided
+    NpmPackage.any_instance.stub(:get_npm_version) do
+      "1.1.0-2"
+    end
+    package = NpmPackage.new("bcrypt", {"version" => "0.4.0"},
+                             @working_dir, nil, nil, @runtime_info, @logger, @cache, @git_cache)
+    FileUtils.touch(File.join(@working_dir, "wscript"))
+    config = { "scripts" => { "install" => "node-gyp rebuild" } }
+    config_file = File.join(@working_dir, "package.json")
+    File.open(config_file, "w+") { |f| f.write(Yajl::Encoder.encode(config)) }
+
+    package.prepare_install_config
+
+    config = Yajl::Parser.parse(File.read(config_file))
+    config["scripts"]["install"].should == "node-waf clean ; node-waf configure build"
+  end
 end
