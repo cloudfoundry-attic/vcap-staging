@@ -36,6 +36,7 @@ class NpmPackage
       # If module is provided and it has native extensions build it
       # It it does not have native extensions skip it
       if has_native_extensions?(@package_path)
+        prepare_install_config
         return install_copy_from_path(@package_path)
       else
         return @package_path
@@ -215,7 +216,7 @@ class NpmPackage
 
   # Verifies if package engine requirements are satisfied
   def engine_version_satisfied?(package_path)
-    config = package_config(File.join(package_path, "package.json"))
+    config = package_config(package_path)
     return true unless config && config["engines"]
     if config["engines"]["node"] || config["engines"]["npm"]
       status, output = verify_engine_versions(config["engines"]["node"], config["engines"]["npm"])
@@ -238,9 +239,28 @@ class NpmPackage
     dir_hash(where)
   end
 
-  def package_config(config_file)
+  # Redefine package scripts:install command
+  # Because npm install may have rewritten it with node-gyp
+  # Use node-waf instead of node-gyp for old npm versions if package goes with wscript
+  # See https://github.com/isaacs/read-package-json used by npm
+  def prepare_install_config
+    if File.exists?(File.join(@package_path, "wscript"))
+      npm_with_node_gyp_version = Gem::Version.new("1.1.4")
+      npm_version = Gem::Version.new(@npm_version.gsub("-", "."))
+      if npm_version < npm_with_node_gyp_version
+        config = package_config(@package_path)
+        if config.is_a?(Hash) && config["scripts"].is_a?(Hash) &&
+            config["scripts"]["install"] && config["scripts"]["install"] =~ /node-gyp/
+          config["scripts"]["install"] = "node-waf clean ; node-waf configure build"
+          save_config(config, @package_path)
+        end
+      end
+    end
+  end
+
+  def package_config(package_path)
     begin
-      package_config = Yajl::Parser.parse(File.new(config_file, "r"))
+      package_config = Yajl::Parser.parse(File.new(config_file(package_path), "r"))
       return package_config
     rescue => e
       @logger.error("Failed parsing package.json of #{@display_name}")
@@ -248,17 +268,20 @@ class NpmPackage
     end
   end
 
+  def config_file(package_path)
+    File.join(package_path, "package.json")
+  end
+
   # This is trying to revert package to state before npm install was run on it
   # 1. Remove npm information from package.json
   # 2. Remove installation results
   def clean_package(where)
     # Remove arbitrary information from package.json
-    config_file = File.join(where, "package.json")
-    config = package_config(config_file)
+    config = package_config(where)
     return unless config
     # Remove all elements that start with underscore (added by npm install)
     config.reject! { |key, _| key =~ /^_/}
-    File.open(config_file, "w+") { |f| f.write(Yajl::Encoder.encode(config)) }
+    save_config(config, where)
 
     # Remove build files
     FileUtils.rm_f(File.join(where, ".lock-wscript"))
@@ -266,6 +289,10 @@ class NpmPackage
     FileUtils.rm_rf(File.join(where, "node_modules"))
     pattern = File.join("**", "*.{node,o}")
     Dir.glob(File.join(where, pattern)) { |file| FileUtils.rm_f(file) }
+  end
+
+  def save_config(config, where)
+    File.open(config_file(where), "w+") { |f| f.write(Yajl::Encoder.encode(config)) }
   end
 
   # Generate consistent hash of the directory
