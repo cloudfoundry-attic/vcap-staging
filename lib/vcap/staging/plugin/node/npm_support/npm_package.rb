@@ -1,6 +1,7 @@
 require "fileutils"
 require "uri"
 require "net/http"
+require "find"
 require File.expand_path("../npm_helper", __FILE__)
 
 # Node module class
@@ -27,7 +28,7 @@ class NpmPackage
     @node_path = runtime[:executable]
     @node_version = runtime[:version]
     @npm_path = runtime[:npm]
-    @npm_version = get_npm_version
+    @npm_version = runtime[:npm_version]
   end
 
   def install
@@ -230,8 +231,21 @@ class NpmPackage
   end
 
   def has_native_extensions?(where)
-    pattern = File.join("**", "{binding.gyp,*.{node,c,cc}}")
-    Dir.glob(File.join(where, pattern)).size > 0
+    native_files = []
+    ignores = ["node_modules"]
+    Find.find(where) do |path|
+      name = File.basename(path)
+      if FileTest.directory?(path)
+        if ignores.include?(name)
+          Find.prune
+        else
+          next
+        end
+      else
+        native_files << name if name =~ /.(c|cc|node)$/
+      end
+    end
+    native_files.size > 0
   end
 
   def clean_package_hash(where)

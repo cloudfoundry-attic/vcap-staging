@@ -21,7 +21,9 @@ module NpmSupport
 
   def compile_node_modules
     # npm provided?
-    return unless runtime[:npm]
+    @runtime = runtime
+    return unless @runtime[:npm]
+    @runtime[:npm_version] = NpmHelper.get_npm_version(@runtime)
 
     if @vcap_config["ignoreNodeModules"]
       logger.warn("ignoreNodeModules in cloudfoundry.json is deprecated, "+
@@ -36,10 +38,10 @@ module NpmSupport
     npm_cache_base_dir = File.join(cache_base_dir, "npm_cache")
     FileUtils.mkdir_p(File.join(npm_cache_base_dir))
 
-    @cache = NpmCache.new(npm_cache_base_dir, runtime[:version], logger)
+    @cache = NpmCache.new(npm_cache_base_dir, @runtime[:version], logger)
     @git_cache = GitCache.new(File.join(cache_base_dir, "git_cache"), nil, logger)
 
-    logger.info("Installing dependencies. Node version #{runtime[:version]}")
+    logger.info("Installing dependencies. Node version #{@runtime[:version]}")
     install_packages(@dependencies, app_directory)
   end
 
@@ -47,7 +49,7 @@ module NpmSupport
     dependencies.each do |name, props|
       package_path = File.join(where, "node_modules", name)
       package = NpmPackage.new(name, props, package_path, @staging_uid,
-                               @staging_gid, runtime, logger, @cache, @git_cache)
+                               @staging_gid, @runtime, logger, @cache, @git_cache)
       installed_dir = package.install
       if installed_dir && props["dependencies"].is_a?(Hash)
         install_packages(props["dependencies"], installed_dir)
