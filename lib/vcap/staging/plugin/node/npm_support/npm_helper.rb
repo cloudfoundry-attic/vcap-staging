@@ -1,8 +1,8 @@
 require File.expand_path("../../../secure_operations", __FILE__)
 
 module NpmHelper
-  def get_npm_version
-    version = `#{node_safe_env} #{npm_cmd} -v 2>&1`
+  def self.get_npm_version(runtime)
+    version = `#{runtime[:executable]} #{runtime[:npm]} -v 2>&1`
     return version.chomp if $?.exitstatus == 0
   end
 
