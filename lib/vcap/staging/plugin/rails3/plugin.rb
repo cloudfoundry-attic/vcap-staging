@@ -49,6 +49,14 @@ class Rails3Plugin < StagingPlugin
     end
   end
 
+  def precompile_assets_command
+    if uses_bundler?
+      "#{local_runtime} #{gem_bin_dir}/bundle exec #{local_runtime} #{gem_bin_dir}/rake assets:precompile"
+    else
+      "#{local_runtime} -S rake assets:precompile"
+    end
+  end
+
   def resource_dir
     File.join(File.dirname(__FILE__), 'resources')
   end
@@ -63,6 +71,7 @@ class Rails3Plugin < StagingPlugin
         configure_database # TODO - Fail if we just configured a database that the user did not bundle a driver for.
         install_autoconfig_gem
       end
+      check_precompiled_assets
       create_asset_plugin
       create_startup_script
       create_stop_script
@@ -105,6 +114,11 @@ if [ -f "$PWD/app/config/database.yml" ] ; then
 fi
         MIGRATE
       end
+      cmds << <<-ASSETS_COMPILATION
+if [ ! -f "$PWD/app/public/assets/manifest.yml" ] ; then
+  cd app && #{precompile_assets_command} >>../logs/assets_compilation.log 2>> ../logs/assets_compilation.log && cd ..;
+fi
+      ASSETS_COMPILATION
       cmds << <<-RUBY_CONSOLE
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
@@ -149,6 +163,13 @@ Rails.application.config.serve_static_assets = true
       fh.puts(init_code)
     end
     FileUtils.chmod(0600, init_script)
+  end
+
+  def check_precompiled_assets
+    assets_manifest = File.join(destination_directory, "app", "public", "assets", "manifest.yml")
+    unless File.exists?(assets_manifest)
+      logger.info "Skipping assets compilation, detected assets manifest"
+    end
   end
 end
 
