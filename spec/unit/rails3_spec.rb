@@ -28,6 +28,9 @@ echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
   cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
 fi
+if [ ! -f "$PWD/app/public/assets/manifest.yml" ] ; then
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake assets:precompile >>../logs/assets_compilation.log 2>> ../logs/assets_compilation.log && cd ..;
+fi
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
   #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
@@ -82,6 +85,9 @@ mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
   cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
+fi
+if [ ! -f "$PWD/app/public/assets/manifest.yml" ] ; then
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake assets:precompile >>../logs/assets_compilation.log 2>> ../logs/assets_compilation.log && cd ..;
 fi
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
@@ -143,6 +149,9 @@ echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
   cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
 fi
+if [ ! -f "$PWD/app/public/assets/manifest.yml" ] ; then
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake assets:precompile >>../logs/assets_compilation.log 2>> ../logs/assets_compilation.log && cd ..;
+fi
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
   #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
@@ -181,6 +190,9 @@ export RUBYOPT="-I$PWD/ruby -rstdsync"
 export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+if [ ! -f "$PWD/app/public/assets/manifest.yml" ] ; then
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake assets:precompile >>../logs/assets_compilation.log 2>> ../logs/assets_compilation.log && cd ..;
+fi
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
   #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
@@ -222,6 +234,9 @@ mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
   cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
+fi
+if [ ! -f "$PWD/app/public/assets/manifest.yml" ] ; then
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake assets:precompile >>../logs/assets_compilation.log 2>> ../logs/assets_compilation.log && cd ..;
 fi
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
@@ -331,6 +346,9 @@ echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
   cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
 fi
+if [ ! -f "$PWD/app/public/assets/manifest.yml" ] ; then
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake assets:precompile >>../logs/assets_compilation.log 2>> ../logs/assets_compilation.log && cd ..;
+fi
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
   #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
@@ -369,6 +387,9 @@ export RUBYOPT="-I$PWD/ruby -rstdsync"
 export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+if [ ! -f "$PWD/app/public/assets/manifest.yml" ] ; then
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake assets:precompile >>../logs/assets_compilation.log 2>> ../logs/assets_compilation.log && cd ..;
+fi
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
   #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
