@@ -36,11 +36,12 @@ module RubyAutoconfig
     bundles_gem? 'cf-runtime'
   end
 
-  def autoconfig_load_path
-    return "-I#{gem_dir}/#{AUTO_CONFIG_GEM_NAME}-#{AUTO_CONFIG_GEM_VERSION}/lib" if autoconfig_enabled? && library_version == '1.8'
+  def autoconfig_load_path(base="$PWD/app")
+    path = "#{gem_dir(base)}/#{AUTO_CONFIG_GEM_NAME}-#{AUTO_CONFIG_GEM_VERSION}/lib"
+    (autoconfig_enabled? && library_version == '1.8') ? "-I#{path}" : ""
   end
 
-  def gem_dir
-    "$PWD/app/rubygems/ruby/#{library_version}/gems"
+  def gem_dir(base="$PWD/app")
+    "#{base}/rubygems/ruby/#{library_version}/gems"
   end
 end

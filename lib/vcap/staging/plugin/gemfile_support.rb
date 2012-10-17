@@ -21,17 +21,6 @@ module GemfileSupport
     return unless uses_bundler?
     return if packaged_with_bundler_in_deployment_mode?
 
-    safe_env = [ "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "C_INCLUDE_PATH", "LIBRARY_PATH" ].map { |e| "#{e}='#{ENV[e]}'" }.join(" ")
-
-    path = ENV["PATH"] || "/bin:/usr/bin:/sbin:/usr/sbin"
-    path = File.dirname(ruby) + ":" + path if ruby[0] == "/"
-    safe_env << " PATH='#{path}'"
-
-    safe_env << " LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8"
-    safe_env << " GEM_PATH='%GEM_PATH%'"
-
-    ruby_cmd = "env -i #{safe_env} #{ruby}"
-
     base_dir = StagingPlugin.platform_config["cache"]
 
     @task = GemfileTask.new(app_dir, library_version, ruby_cmd, base_dir,
@@ -44,6 +33,19 @@ module GemfileSupport
     @rack = @task.bundles_gem?("rack")
     @thin = @task.bundles_gem?("thin")
     write_bundle_config
+  end
+
+  def ruby_cmd
+    safe_env = [ "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "C_INCLUDE_PATH", "LIBRARY_PATH" ].map { |e| "#{e}='#{ENV[e]}'" }.join(" ")
+
+    path = ENV["PATH"] || "/bin:/usr/bin:/sbin:/usr/sbin"
+    path = File.dirname(ruby) + ":" + path if ruby[0] == "/"
+    safe_env << " PATH='#{path}'"
+
+    safe_env << " LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8"
+    safe_env << " GEM_PATH='%GEM_PATH%'"
+
+    "env -i #{safe_env} #{ruby}"
   end
 
   def library_version

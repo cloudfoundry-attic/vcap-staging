@@ -24,8 +24,8 @@ module NpmHelper
 
   def npm_flags
     cmd = "--production true --color false --loglevel error --non-global true --force true"
-    cmd += " --user #{@uid}" if @uid
-    cmd += " --group #{@gid}" if @gid
+    cmd += " --user #{@staging_uid}" if @staging_uid
+    cmd += " --group #{@staging_gid}" if @staging_gid
     cmd
   end
 

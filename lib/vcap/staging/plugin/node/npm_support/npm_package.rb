@@ -19,8 +19,8 @@ class NpmPackage
     # Else use "version" as target
     @target = (props["from"] || props["version"]).chomp
     @display_name = "#{@name}@#{@target}"
-    @uid = secure_uid
-    @gid = secure_gid
+    @staging_uid = secure_uid
+    @staging_gid = secure_gid
     @logger = logger
     @cache = cache
     @git_cache = git_cache

@@ -16,8 +16,8 @@ class GemfileTask
     FileUtils.mkdir_p(@blessed_gems_dir)
 
     @ruby_cmd = ruby_cmd.gsub("%GEM_PATH%", installation_directory)
-    @uid = uid
-    @gid = gid
+    @staging_uid = uid
+    @staging_gid = gid
     @options = options
 
     log_file = File.expand_path(File.join(@app_dir, "..", "logs", "staging.log"))
@@ -309,7 +309,7 @@ class GemfileTask
       return nil
     end
 
-    @logger.debug("Doing a gem install from #{staged_gemfile} into #{gem_install_dir} as user #{@uid || 'cc'}")
+    @logger.debug("Doing a gem install from #{staged_gemfile} into #{gem_install_dir} as user #{@staging_uid || 'cc'}")
     staging_cmd = "#{@ruby_cmd} -S gem install #{staged_gemfile} --local --no-rdoc --no-ri -E -w -f --ignore-dependencies --install-dir #{gem_install_dir}"
 
     begin
