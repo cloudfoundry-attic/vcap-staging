@@ -1,10 +1,12 @@
-require File.expand_path('../database_support', __FILE__)
-require 'uuidtools'
+require File.expand_path("../database_support", __FILE__)
+require File.expand_path("../../secure_operations", __FILE__)
+require "uuidtools"
 
 class Rails3Plugin < StagingPlugin
   include GemfileSupport
   include RailsDatabaseSupport
   include RubyAutoconfig
+  include SecureOperations
 
   # PWD here is after we change to the 'app' directory.
   def start_command
@@ -49,6 +51,20 @@ class Rails3Plugin < StagingPlugin
     end
   end
 
+  def precompile_assets_command
+    cmd = ruby_cmd
+    # This task loads initializers by default, that may require db connection
+    # Right now cfautoconfig can't work on stager, so such applications need to set:
+    # config.assets.initialize_on_precompile = false in application.rb
+    # TODO: set this options by default or turn on live compilation
+    # or make cfautoconfig work on stager
+    if uses_bundler?
+      "#{cmd} #{gem_bin_dir}/bundle exec #{gem_bin_dir}/rake assets:precompile"
+    else
+      "#{cmd} -S rake assets:precompile"
+    end
+  end
+
   def resource_dir
     File.join(File.dirname(__FILE__), 'resources')
   end
@@ -63,6 +79,7 @@ class Rails3Plugin < StagingPlugin
         configure_database # TODO - Fail if we just configured a database that the user did not bundle a driver for.
         install_autoconfig_gem
       end
+      precompile_assets
       create_asset_plugin
       create_startup_script
       create_stop_script
@@ -149,6 +166,34 @@ Rails.application.config.serve_static_assets = true
       fh.puts(init_code)
     end
     FileUtils.chmod(0600, init_script)
+  end
+
+  def precompile_assets
+    assets_manifest = File.join(app_dir, "public", "assets", "manifest.yml")
+    if File.exists?(assets_manifest)
+      logger.info("Skipping assets compilation, detected assets manifest")
+    else
+      logger.info("Running rake assets:precompile")
+      Dir.mktmpdir do |tmp_dir|
+        `cp -a #{app_dir}/. #{tmp_dir}`
+
+        cmd = precompile_assets_command
+        gem_path = File.dirname(File.join(tmp_dir, gem_bin_dir))
+        cmd = cmd.gsub("%GEM_PATH%", gem_path)
+
+        Dir.chdir(tmp_dir) do
+          # TODO: move this to separate class
+          @uid = @staging_uid
+          @gid = @staging_gid
+          exitstatus, output = run_secure(cmd, tmp_dir)
+          if exitstatus == 0
+            `cp -a #{tmp_dir}/. #{app_dir}`
+          else
+            logger.error("Assets precompilation failed: #{output}")
+          end
+        end
+      end
+    end
   end
 end
 
