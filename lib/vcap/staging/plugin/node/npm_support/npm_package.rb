@@ -162,6 +162,11 @@ class NpmPackage
 
   def copy_to_dst(source)
     return unless source && File.exists?(source)
+    # Save module dependencies from local path
+    deps_dir = File.join(@package_path, "node_modules")
+    if File.exists?(deps_dir)
+      `cp -a #{shellescape(deps_dir)} #{shellescape(source)}`
+    end
     FileUtils.rm_rf(@package_path)
     FileUtils.mkdir_p(@package_path)
     `cp -a #{shellescape(source)}/. #{shellescape(@package_path)}`
