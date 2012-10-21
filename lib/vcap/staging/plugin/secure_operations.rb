@@ -19,10 +19,10 @@ module SecureOperations
         if options[:secure_group]
           cmd ="sudo -u '##{@uid}' sg #{secure_group} -c \"cd #{where} && #{cmd}\" 2>&1"
         else
-          cmd = "cd #{where} && sudo -u '##{@uid}' #{cmd}"
+          cmd = "cd #{where} && sudo -u '##{@uid}' #{cmd} 2>&1"
         end
       else
-        cmd = "cd #{where} && #{cmd}"
+        cmd = "cd #{where} && #{cmd} 2>&1"
       end
 
       IO.popen(cmd) do |io|
@@ -30,6 +30,7 @@ module SecureOperations
       end
 
       exitstatus = $?.exitstatus
+      output = output.chomp if !output.nil?
 
       # Kill any stray processes that the cmd may have created
       `sudo -u '##{@uid}' pkill -9 -U #{@uid} 2>&1` if @uid

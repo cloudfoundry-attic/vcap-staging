@@ -2,6 +2,28 @@ require 'rubygems'
 require 'bundler'
 require 'yaml'
 
+class BundlerOutputWriter < Bundler::UI
+  def warn(message, newline = nil)
+    puts message
+  end
+
+  def debug(message, newline = nil)
+    puts message
+  end
+
+  def error(message, newline = nil)
+    puts message
+  end
+
+  def info(message, newline = nil)
+    puts message
+  end
+
+  def confirm(message, newline = nil)
+    puts message
+  end
+end
+
 def bundle_definition
   @bundle ||= \
     begin
@@ -74,6 +96,8 @@ results_file, bundle_without = ARGV
 # Freeze the bundle so future calls to resolve method will return only locked_specs
 ENV['BUNDLE_FROZEN'] = "1"
 ENV['BUNDLE_GEMFILE'] = File.expand_path("Gemfile")
+# Direct all Bundler messages to stdout
+Bundler.ui= BundlerOutputWriter.new
 File.open(results_file, 'w+') do |f|
   YAML.dump(specs, f)
 end

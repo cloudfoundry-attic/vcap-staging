@@ -45,9 +45,9 @@ class GemfileTask
       spec_file = File.join(tmp_dir,"specs")
       spec_cmd = "#{@ruby_cmd} #{File.expand_path('../gemfile_parser.rb', __FILE__)} #{spec_file}"
       spec_cmd = "#{spec_cmd} \"#{@options[:bundle_without]}\"" if @options[:bundle_without]
-      exitstatus, _ = run_secure(spec_cmd, tmp_dir)
-      if exitstatus != 0
-        raise "Error resolving Gemfile"
+      exitstatus, output = run_secure(spec_cmd, tmp_dir)
+      unless exitstatus == 0
+        log_and_raise_error "Error resolving Gemfile: #{output}"
       end
       YAML.load_file(spec_file)
     end
@@ -126,7 +126,7 @@ class GemfileTask
     gem_filename = gem_filename(spec[:name], spec[:version])
     unless spec[:source][:revision]
       # Revision should be always provided in lock file
-      raise "Failed installing git gem #{gem_filename}: revision is required"
+      log_and_raise_error "Failed installing git gem #{gem_filename}: revision is required"
     end
     dest = File.join(installation_directory, "bundler", "gems", spec[:source][:git_scope])
     # Skip in case we already processed request for gem in the same git scope
@@ -144,7 +144,7 @@ class GemfileTask
         tmp_dir = Dir.mktmpdir
         tmp_source_path = @git_cache.get_source(spec[:source], tmp_dir)
         gem_logname = "#{spec[:name]}-#{spec[:source][:revision]}"
-        raise "Failed fetching gem #{gem_logname} from source" unless tmp_source_path
+        log_and_raise_error "Failed fetching gem #{gem_logname} from source" unless tmp_source_path
 
         # Build all gemspecs with extensions in source
         gemspecs = Dir.glob(File.join(tmp_source_path, "{,*,*/*}.gemspec"))
@@ -162,12 +162,10 @@ class GemfileTask
 
             # Build gemspec
             gem_path = gemspec.build
-            raise "Failed building #{gemspec.filename}" unless gem_path
 
             # Install gem
             gem_full_name = File.basename(gem_path, ".gem")
             installed_path = compile_gem(gem_path)
-            raise "Failed installing git gem #{gem_full_name}" unless installed_path
             FileUtils.rm_f(gem_path)
 
             # Copy installed contents back to source
@@ -209,7 +207,6 @@ class GemfileTask
       @logger.debug "Installing #{type} gem: #{gem_path}"
 
       tmp_gem_dir = compile_gem(gem_path)
-      raise "Failed installing #{gem_filename}" unless tmp_gem_dir
 
       installed_gem_path = @cache.put(gem_path, tmp_gem_dir)
     end
@@ -243,7 +240,7 @@ class GemfileTask
 
         gem_filename = gem_filename(name, version)
         unless fetch_gem_from_rubygems(gem_filename)
-          raise "Failed fetching missing gem #{gem_filename} from Rubygems"
+          log_and_raise_error "Failed fetching missing gem #{gem_filename} from Rubygems"
         end
       end
     end
@@ -269,20 +266,17 @@ class GemfileTask
   # We may be able to get away with mv here instead of a cp
   def stage_gemfile_for_install(src, tmp_dir)
     output = `cp #{src} #{tmp_dir} 2>&1`
-    if $?.exitstatus != 0
-      @logger.error "Failed copying #{src} to #{tmp_dir}: #{output}"
-      return nil
+    unless $?.exitstatus == 0
+      log_and_raise_error "Failed copying gemfile #{src} to staging dir #{tmp_dir} for install: #{output}"
     end
 
     staged_gemfile = File.join(tmp_dir, File.basename(src))
 
     output = `chmod -R 0744 #{staged_gemfile} 2>&1`
-    if $?.exitstatus != 0
-      @logger.error "Failed chmodding #{tmp_dir}: #{output}"
-      nil
-    else
-      staged_gemfile
+    unless $?.exitstatus == 0
+      log_an_raise_error "Failed chmodding staging dir #{tmp_dir} for install: #{output}"
     end
+    staged_gemfile
   end
 
   # Perform a gem install from src_dir into a temporary directory
@@ -295,18 +289,13 @@ class GemfileTask
 
     # Copy gemfile into tempdir, make sure secure user can read it
     staged_gemfile = stage_gemfile_for_install(gemfile_path, tmp_dir)
-    unless staged_gemfile
-      @logger.error "Failed copying gemfile to staging dir for install"
-      return nil
-    end
 
     # Create a temp dir that the user can write into (gem install into)
     gem_install_dir = File.join(tmp_dir, 'gem_install_dir')
     begin
       Dir.mkdir(gem_install_dir)
     rescue => e
-      @logger.error "Failed creating gem install dir: #{e}"
-      return nil
+      log_and_raise_error "Failed creating gem install dir: #{e}"
     end
 
     @logger.debug("Doing a gem install from #{staged_gemfile} into #{gem_install_dir} as user #{@uid || 'cc'}")
@@ -317,10 +306,18 @@ class GemfileTask
       app_staged_dir = File.dirname(File.dirname(@app_dir))
       secure_chown(app_staged_dir)
 
-      exitstatus, _ = run_secure(staging_cmd, tmp_dir)
-      return exitstatus == 0 ? gem_install_dir : nil
+      exitstatus, output = run_secure(staging_cmd, tmp_dir)
+      unless exitstatus == 0
+        log_and_raise_error "Failed installing gem #{File.basename(gemfile_path)}: #{output}"
+      end
+      gem_install_dir
     ensure
       unsecure_file(app_staged_dir)
     end
+  end
+
+  def log_and_raise_error(message)
+    @logger.error message
+    raise message
   end
 end
