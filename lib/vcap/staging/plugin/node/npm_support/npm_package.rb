@@ -177,7 +177,8 @@ class NpmPackage
 
   def build(where)
     cmd_status, output = run_build(where)
-    if cmd_status != 0
+    # Can't rely on npm exit code
+    if cmd_status != 0 || output =~ /npm ERR!/ || output =~ /gyp ERR!/
       @logger.error("Failed building package: #{@display_name}")
       @logger.error(output) if output
     end
