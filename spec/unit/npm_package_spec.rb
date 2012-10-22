@@ -11,6 +11,7 @@ describe NpmPackage do
     @cache = double("Cache").as_null_object
     @git_cache = double("GitCache").as_null_object
     @runtime_info = node_staging_env[:runtime_info]
+    @runtime_info[:npm_version] = NpmHelper.get_npm_version(@runtime_info)
     @working_dir = Dir.mktmpdir
   end
 
@@ -26,7 +27,7 @@ describe NpmPackage do
                              @runtime_info, @logger, @cache, @git_cache)
     package.has_native_extensions?(package_path).should be true
 
-    app = app_fixture_base_directory.join("node_deps_installed", "source")
+    app = app_fixture_base_directory.join("node_deps_no_shrinkwrap", "source")
     package_path = File.join(app, "node_modules", "colors")
     package = NpmPackage.new("colors", {"version" => "0.6.0-1"}, package_path, nil, nil,
                              @runtime_info, @logger, @cache, @git_cache)
@@ -171,9 +172,7 @@ describe NpmPackage do
 
   it "overwrites install script for old npm versions" do
     pending_unless_npm_provided
-    NpmPackage.any_instance.stub(:get_npm_version) do
-      "1.1.0-2"
-    end
+    @runtime_info[:npm_version] = "1.1.0-2"
     package = NpmPackage.new("bcrypt", {"version" => "0.4.0"},
                              @working_dir, nil, nil, @runtime_info, @logger, @cache, @git_cache)
     FileUtils.touch(File.join(@working_dir, "wscript"))
