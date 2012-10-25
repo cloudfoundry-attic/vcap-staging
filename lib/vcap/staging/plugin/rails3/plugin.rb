@@ -58,7 +58,7 @@ class Rails3Plugin < StagingPlugin
       create_app_directories
       copy_source_files
       stage_console
-      compile_gems
+      compile_gems(:bundle_without => excluded_groups)
       if autoconfig_enabled?
         configure_database # TODO - Fail if we just configured a database that the user did not bundle a driver for.
         install_autoconfig_gem
@@ -66,6 +66,18 @@ class Rails3Plugin < StagingPlugin
       create_asset_plugin
       create_startup_script
       create_stop_script
+    end
+  end
+
+  def excluded_groups
+    (rails_env == "development") ? "test" : "test:development"
+  end
+
+  def rails_env
+    if environment[:environment]
+      rails_env_var = environment[:environment].find {|env| env =~ /\ARAILS_ENV=/}
+      # Get value of RAILS_ENV without trailing quotes
+      rails_env_var.strip.match(/^RAILS_ENV=('|")?(.*?)(\1)?$/)[2] if rails_env_var
     end
   end
 

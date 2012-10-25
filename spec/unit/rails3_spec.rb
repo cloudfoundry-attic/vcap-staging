@@ -385,7 +385,32 @@ wait $STARTED
       end
     end
   end
+
+  describe "with development and test groups" do
+    before do
+      app_fixture :rails3_no_assets
+    end
+
+    it "does not install gems from test and development groups" do
+      stage rails_staging_env do |staged_dir|
+        gem_dir = File.join(staged_dir,"app", "rubygems", "ruby", "1.8","gems")
+        installed_gems = Dir.entries(gem_dir)
+        installed_gems.should_not include "rspec-2.11.0" # test
+        installed_gems.should_not include "rubyzip-0.9.9" # development
+      end
+    end
+
+    it "installs development gems if RAILS_ENV=development and does not install test gems" do
+      stage rails_staging_env.merge({:environment => ["RAILS_ENV=development"]}) do |staged_dir|
+        gem_dir = File.join(staged_dir,"app", "rubygems", "ruby", "1.8","gems")
+        installed_gems = Dir.entries(gem_dir)
+        installed_gems.should_not include "rspec-2.11.0" # test
+        installed_gems.should include "rubyzip-0.9.9" # development
+      end
+    end
+  end
 end
+
 def rails_staging_env(services=[])
   {:runtime_info => {
      :name => "ruby18",
