@@ -58,7 +58,7 @@ class Rails3Plugin < StagingPlugin
       create_app_directories
       copy_source_files
       stage_console
-      compile_gems
+      compile_gems(:bundle_without => "test:development")
       if autoconfig_enabled?
         configure_database # TODO - Fail if we just configured a database that the user did not bundle a driver for.
         install_autoconfig_gem

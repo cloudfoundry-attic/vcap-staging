@@ -14,9 +14,12 @@ module GemfileSupport
   #    Rubygems path structure.
   # NB: ideally this should be refactored into a set of saner helper classes, as it's really
   # hard to follow who calls what and where.
-  def compile_gems
+  # Accepts the following options:
+  # :bundle_without - a :-separated list of groups whose gems should not be installed
+  def compile_gems(options={})
     @rack = true
     @thin = true
+    @bundle_without = options[:bundle_without]
 
     return unless uses_bundler?
     return if packaged_with_bundler_in_deployment_mode?
@@ -51,7 +54,7 @@ module GemfileSupport
   end
 
   def bundle_without
-    excluded_groups = "test"
+    excluded_groups= @bundle_without || "test"
     without = environment[:environment].find {|env| env =~ /\ABUNDLE_WITHOUT=/} if environment[:environment]
     if without
       if without.split('=').last.strip == "BUNDLE_WITHOUT"
