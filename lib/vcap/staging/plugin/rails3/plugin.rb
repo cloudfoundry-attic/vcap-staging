@@ -72,6 +72,7 @@ class Rails3Plugin < StagingPlugin
   end
 
   def stage_application
+    @bundle_without = excluded_groups
     Dir.chdir(destination_directory) do
       create_app_directories
       copy_source_files
@@ -85,6 +86,18 @@ class Rails3Plugin < StagingPlugin
       create_asset_plugin
       create_startup_script
       create_stop_script
+    end
+  end
+
+  def excluded_groups
+    (rails_env == "development") ? "test" : "test:development"
+  end
+
+  def rails_env
+    if environment[:environment]
+      rails_env_var = environment[:environment].find {|env| env =~ /\ARAILS_ENV=/}
+      # Get value of RAILS_ENV without trailing quotes
+      rails_env_var.strip.match(/^RAILS_ENV=('|")?(.*?)(\1)?$/)[2] if rails_env_var
     end
   end
 
