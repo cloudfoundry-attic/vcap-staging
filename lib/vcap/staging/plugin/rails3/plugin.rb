@@ -81,8 +81,8 @@ class Rails3Plugin < StagingPlugin
         configure_database # TODO - Fail if we just configured a database that the user did not bundle a driver for.
         install_autoconfig_gem
       end
-      precompile_assets
-      create_asset_plugin
+      live_compilation = true unless precompile_assets
+      create_asset_plugin({:live_compilation => live_compilation})
       create_startup_script
       create_stop_script
     end
@@ -157,11 +157,17 @@ fi
   # Generates a trivial Rails plugin that re-enables static asset serving at boot, as
   # Rails applications often disable asset serving in production mode, and delegate that to
   # nginx or similar
-  def create_asset_plugin
-    init_code = <<-BODY
-Rails.application.config.serve_static_assets = true
-    BODY
-    plugin_dir = File.join(destination_directory, 'app', 'vendor', 'plugins', 'serve_static_assets')
+  def create_asset_plugin(options)
+    config = {"Rails.application.config.serve_static_assets" => "true"}
+    if options[:live_compilation]
+      logger.info("Turning on live assets compilation")
+      config["Rails.application.config.assets.compile"] = "true"
+    end
+    init_code = ""
+    config.each do |key, value|
+      init_code << "#{key} = #{value}\n"
+    end
+    plugin_dir = File.join(destination_directory, 'app', 'vendor', 'plugins', 'configure_assets')
     FileUtils.mkdir_p(plugin_dir)
     init_script = File.join(plugin_dir, 'init.rb')
     File.open(init_script, 'wb') do |fh|

@@ -103,8 +103,8 @@ wait $STARTED
   it "is packaged with the appropriate Rails plugin" do
       stage rails_staging_env do |staged_dir|
         plugin_dir = staged_dir.join('app', 'vendor', 'plugins')
-        plugin_dir.join('serve_static_assets').should be_directory
-        plugin_dir.join('serve_static_assets', 'init.rb').should be_readable
+        plugin_dir.join('configure_assets').should be_directory
+        plugin_dir.join('configure_assets', 'init.rb').should be_readable
       end
     end
 
@@ -386,6 +386,29 @@ wait $STARTED
     end
   end
 end
+
+describe "Rails3Plugin" do
+  before :each do
+    @working_dir = Dir.mktmpdir
+    @plugin = StagingPlugin.load_plugin_for(rails_staging_env[:framework_info][:name])
+  end
+
+  after :each do
+    FileUtils.rm_rf(@working_dir) if @working_dir
+  end
+
+  it "adds live compilation in assets plugin" do
+    expected_assets_config = <<BODY
+Rails.application.config.serve_static_assets = true
+Rails.application.config.assets.compile = true
+BODY
+    stager = @plugin.new(@working_dir, @working_dir, rails_staging_env)
+    stager.create_asset_plugin({:live_compilation => true})
+    config = File.read(File.join(@working_dir, "app", "vendor", "plugins", "configure_assets", "init.rb"))
+    config.should == expected_assets_config
+  end
+end
+
 def rails_staging_env(services=[])
   {:runtime_info => {
      :name => "ruby18",
