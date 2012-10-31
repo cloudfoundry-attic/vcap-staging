@@ -1,16 +1,21 @@
 module JavaDatabaseSupport
   SERVICE_DRIVER_HASH = {
-    "mysql-5.1" => '*mysql-connector-java-*.jar',
-    "postgresql-9.0" => '*postgresql-*.jdbc*.jar'
+    "mysql" => '*mysql-connector-java-*.jar',
+    "postgresql" => '*postgresql-*.jdbc*.jar'
   }
 
   def copy_service_drivers(driver_dest,services)
     return if services == nil
-    drivers = services.select { |svc|
-      SERVICE_DRIVER_HASH.has_key?(svc[:label])
+    drivers = []
+    services.each { |svc|
+      db_label = svc[:label]
+      db_key = db_label.index('-') ? db_label.slice(0, db_label.index('-')) : db_label
+      if SERVICE_DRIVER_HASH.has_key?(db_key)
+        drivers << db_key
+      end
     }
     drivers.each { |driver|
-      copy_jar SERVICE_DRIVER_HASH[driver[:label]], driver_dest
+      copy_jar SERVICE_DRIVER_HASH[driver], driver_dest
     } if drivers
   end
 
