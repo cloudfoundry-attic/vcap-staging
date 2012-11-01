@@ -99,6 +99,10 @@ class GemfileTask
     specs.any? { |spec| spec[:name] == gem_name }
   end
 
+  def gem_info(gem_name)
+    specs.find { |spec| spec[:name] == gem_name }
+  end
+
   def install_gem(name, version)
     gem_filename = gem_filename(name, version)
     user_gem_path = File.join(@app_dir, "vendor", "cache", gem_filename)
