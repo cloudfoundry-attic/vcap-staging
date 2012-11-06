@@ -1,6 +1,5 @@
 class StandalonePlugin < StagingPlugin
   include GemfileSupport
-  include RubyAutoconfig
 
   def stage_application
     Dir.chdir(destination_directory) do
@@ -39,19 +38,7 @@ class StandalonePlugin < StagingPlugin
   end
 
   def ruby_startup_script
-    vars = {}
-    if uses_bundler?
-      vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:$PATH"
-      vars['GEM_PATH'] = vars['GEM_HOME'] = "$PWD/app/rubygems/ruby/#{library_version}"
-      if autoconfig_enabled?
-        vars['RUBYOPT'] = "-I$PWD/ruby #{autoconfig_load_path} -rcfautoconfig -rstdsync"
-      else
-        vars['RUBYOPT'] = "-I$PWD/ruby -rstdsync"
-      end
-    else
-      vars['RUBYOPT'] = "-rubygems -I$PWD/ruby -rstdsync"
-    end
-    generate_startup_script(vars) do
+    generate_startup_script(ruby_startup_vars) do
       ruby_stdsync_startup
     end
   end
