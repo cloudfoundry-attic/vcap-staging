@@ -76,4 +76,14 @@ module StagingSpecHelpers
     FileUtils.rm_r(working_dir) if working_dir
     FileUtils.rm_r(source_tempdir) if source_tempdir
   end
+
+  def spec_bundler_cmd(runtime_name)
+    runtime_name.upcase!
+    if ENV["VCAP_RUNTIME_#{runtime_name}"]
+      ruby_bin_dir = File.dirname(ENV["VCAP_RUNTIME_#{runtime_name}"])
+      File.join(ruby_bin_dir, "bundle")
+    else
+      (runtime_name == "RUBY18") ? "/usr/bin/bundle" : "bundle"
+    end
+  end
 end

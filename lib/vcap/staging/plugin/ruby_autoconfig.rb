@@ -1,5 +1,4 @@
 module RubyAutoconfig
-  include GemfileSupport
 
   AUTO_CONFIG_GEM_NAME= 'cf-autoconfig'
   AUTO_CONFIG_GEM_VERSION= '0.0.4'
@@ -41,6 +40,6 @@ module RubyAutoconfig
   end
 
   def gem_dir
-    "$PWD/app/rubygems/ruby/#{library_version}/gems"
+    "$PWD/app/#{gem_base_dir}/gems"
   end
 end
