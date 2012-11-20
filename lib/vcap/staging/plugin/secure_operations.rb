@@ -1,4 +1,5 @@
 require "shellwords"
+require "open3"
 
 # This module contains methods for performing tasks and
 # setting file permissions/ownership using a secure user
@@ -10,26 +11,30 @@ module SecureOperations
   # Otherwise, process is run as current user
   # Use the "where" variable to set the process working dir,
   def run_secure(cmd, where, options={})
-    exitstatus = nil
     output = nil
+    exitstatus = nil
 
     secure_file(where)
     begin
+      shell_argv = []
+
       if @uid
+        shell_argv.push("sudo", "-u", "##{@uid}")
         if options[:secure_group]
-          cmd ="sudo -u '##{@uid}' sg #{secure_group} -c \"cd #{where} && #{cmd}\" 2>&1"
-        else
-          cmd = "cd #{where} && sudo -u '##{@uid}' #{cmd}"
+          shell_argv.push("sg", secure_group)
         end
-      else
-        cmd = "cd #{where} && #{cmd}"
       end
 
-      IO.popen(cmd) do |io|
-        output = io.read
-      end
+      shell_argv.push("/bin/sh")
 
-      exitstatus = $?.exitstatus
+      Open3.popen2e(*shell_argv) do |stdin, stdout_and_stderr, wait_thr|
+        stdin.puts("cd #{where}")
+        stdin.puts(cmd)
+        stdin.close
+
+        output = stdout_and_stderr.read
+        exitstatus = wait_thr.value.exitstatus
+      end
 
       # Kill any stray processes that the cmd may have created
       `sudo -u '##{@uid}' pkill -9 -U #{@uid} 2>&1` if @uid
