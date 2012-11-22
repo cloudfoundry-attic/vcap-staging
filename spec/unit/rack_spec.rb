@@ -18,10 +18,11 @@ export RUBYOPT="-rubygems -I$PWD/ruby -rstdsync"
 export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+DROPLET_BASE_DIR=$PWD
 cd app
-#{executable} -S rackup $@ config.ru -E $RACK_ENV > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} -S rackup $@ config.ru -E $RACK_ENV > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
       EXPECTED
     end
@@ -48,10 +49,11 @@ export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AU
 export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+DROPLET_BASE_DIR=$PWD
 cd app
-#{executable} #{rack_staging_env[:runtime_info][:bundler]} exec #{executable} -S ./rubygems/ruby/1.8/bin/rackup $@ config.ru -E $RACK_ENV > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} #{rack_staging_env[:runtime_info][:bundler]} exec #{executable} -S ./rubygems/ruby/1.8/bin/rackup $@ config.ru -E $RACK_ENV > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
       EXPECTED
       end
