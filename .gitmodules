@@ -1,3 +1,6 @@
 [submodule "java"]
 	path = java
 	url = https://github.com/cloudfoundry/vcap-java.git
+[submodule "vendor/buildpacks/ruby"]
+	path = vendor/buildpacks/ruby
+	url = https://github.com/heroku/heroku-buildpack-ruby
