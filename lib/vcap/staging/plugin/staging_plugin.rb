@@ -219,10 +219,11 @@ class StagingPlugin
 #!/bin/bash
 <%= environment_statements_for(env_vars) %>
 <%= after_env_before_script %>
+DROPLET_BASE_DIR=$PWD
 <%= change_directory_for_start %>
-<%= start_command %> > ../logs/stdout.log 2> ../logs/stderr.log &
+<%= start_command %> > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 <%= get_launched_process_pid %>
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 <%= wait_for_launched_process %>
     SCRIPT
     # TODO - ERB is pretty irritating when it comes to blank lines, such as when 'after_env_before_script' is nil.
