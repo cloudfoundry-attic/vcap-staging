@@ -191,7 +191,13 @@ class NpmPackage
     # TODO: replicate npm registry database
     npm_registry_url = URI("http://registry.npmjs.org/#{@name}/#{@target}")
     begin
-      res = Net::HTTP.get_response(npm_registry_url)
+      if ENV["HTTP_PROXY"]
+        proxy_uri = URI(ENV["HTTP_PROXY"])
+        http = Net::HTTP::Proxy(proxy_uri.host, proxy_uri.port, proxy_uri.user, proxy_uri.password)
+      else
+        http = Net::HTTP
+      end
+      res = http.get_response(npm_registry_url)
     rescue Timeout::Error
       @logger.error("Timeout error requesting npm registry #{@display_name}")
       return nil

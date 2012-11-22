@@ -15,12 +15,17 @@ module GemfileSupport
   # NB: ideally this should be refactored into a set of saner helper classes, as it's really
   # hard to follow who calls what and where.
   def compile_gems
-    @rack = true
-    @thin = true
-
     return unless uses_bundler?
     return if packaged_with_bundler_in_deployment_mode?
 
+    gem_task.install
+    gem_task.install_bundler
+    gem_task.remove_gems_cached_in_app
+
+    write_bundle_config
+  end
+
+  def ruby_cmd
     safe_env = [ "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "C_INCLUDE_PATH", "LIBRARY_PATH" ].map { |e| "#{e}='#{ENV[e]}'" }.join(" ")
 
     path = ENV["PATH"] || "/bin:/usr/bin:/sbin:/usr/sbin"
@@ -30,24 +35,18 @@ module GemfileSupport
     safe_env << " LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8"
     safe_env << " GEM_PATH='%GEM_PATH%'"
 
-    ruby_cmd = "env -i #{safe_env} #{ruby}"
+    "env -i #{safe_env} #{ruby}"
+  end
 
+  def gem_task
+    return @task if @task
     base_dir = StagingPlugin.platform_config["cache"]
-
     @task = GemfileTask.new(app_dir, library_version, ruby_cmd, base_dir,
-     {:bundle_without=>bundle_without}, @staging_uid, @staging_gid)
-
-    @task.install
-    @task.install_bundler
-    @task.remove_gems_cached_in_app
-
-    @rack = @task.bundles_gem?("rack")
-    @thin = @task.bundles_gem?("thin")
-    write_bundle_config
+      runtime[:version], {:bundle_without=>bundle_without}, @staging_uid, @staging_gid)
   end
 
   def library_version
-    runtime[:name] == "ruby19" ? "1.9.1" : "1.8"
+    runtime[:version] =~ /\A1\.9/ ? "1.9.1" : "1.8"
   end
 
   def bundle_without
@@ -66,12 +65,12 @@ module GemfileSupport
 
   # Can we expect to run this app on Rack?
   def rack?
-    @rack
+    gem_task.bundles_gem?("rack")
   end
 
   # Can we expect to run this app on Thin?
   def thin?
-    @thin
+    gem_task.bundles_gem?("thin")
   end
 
   def uses_bundler?
@@ -80,7 +79,11 @@ module GemfileSupport
 
   # The application includes some version of the specified gem in its bundle
   def bundles_gem?(gem_name)
-    @task.bundles_gem? gem_name
+    gem_task.bundles_gem?(gem_name)
+  end
+
+  def gem_info(gem_name)
+    gem_task.gem_info(gem_name)
   end
 
   def packaged_with_bundler_in_deployment_mode?
@@ -88,11 +91,11 @@ module GemfileSupport
   end
 
   def install_local_gem(gem_dir, gem_filename)
-    @task.install_local_gem(gem_dir, gem_filename)
+    gem_task.install_local_gem(gem_dir, gem_filename)
   end
 
   def install_gems(gems)
-    @task.install_gems(gems)
+    gem_task.install_gems(gems)
   end
 
   # This sets a relative path to the bundle directory, so nothing is confused

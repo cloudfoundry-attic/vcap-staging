@@ -33,6 +33,7 @@ module SecureOperations
         stdin.close
 
         output = stdout_and_stderr.read
+        output = output.chomp unless output.nil?
         exitstatus = wait_thr.value.exitstatus
       end
 

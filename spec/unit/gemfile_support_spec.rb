@@ -183,7 +183,7 @@ describe 'An app being staged with inconsistent Gemfile and Gemfile.lock' do
 
   it 'causes an error' do
     # Some dependencies in Gemfile were removed from Gemfile.lock
-    lambda {stage sinatra_staging_env}.should raise_error(RuntimeError)
+    lambda {stage sinatra_staging_env}.should raise_error(RuntimeError, /Error resolving Gemfile: Error parsing Gemfile: You are trying to install in deployment mode/)
   end
 end
 
@@ -194,7 +194,7 @@ describe 'An app being staged with Ruby version specified in Gemfile' do
   end
 
   it 'causes an error' do
-    lambda {stage(sinatra_staging_env)}.should raise_error(RuntimeError)
+    lambda {stage(sinatra_staging_env)}.should raise_error(RuntimeError, /undefined method `ruby'/)
   end
 end
 
@@ -274,6 +274,16 @@ describe "An app being staged with gems that depend on other gems" do
   end
 end
 
+describe "An app being staged with gems that fail to install" do
+
+  before do
+    app_fixture :sinatra_broken_gem_compile
+  end
+
+  it "raises an Error" do
+    lambda {stage(sinatra_staging_env)}.should raise_error(RuntimeError, /unterminated string meets end of file/)
+  end
+end
 def sinatra_staging_env
   {:runtime_info => {
      :name => "ruby18",
