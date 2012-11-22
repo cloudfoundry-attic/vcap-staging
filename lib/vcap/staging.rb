@@ -3,5 +3,5 @@ module VCAP
   end
 end
 
-require 'vcap/staging/plugin/common'
+require 'vcap/staging/plugin/staging_plugin'
 require 'vcap/staging/version'

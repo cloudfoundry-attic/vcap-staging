@@ -434,17 +434,20 @@ BODY
 end
 
 def rails_staging_env(services=[])
-  {:runtime_info => {
-     :name => "ruby18",
-     :version => "1.8.7",
-     :description => "Ruby 1.8.7",
-     :executable => "/usr/bin/ruby",
-     :bundler => spec_bundler_cmd("ruby18"),
-     :environment => {"bundle_gemfile"=>nil}
-   },
-   :framework_info => {
-     :name => "rails3",
-     :runtimes => [{"ruby18"=>{"default"=>true}}, {"ruby19"=>{"default"=>false}}],
-     :detection => [{"config/application.rb"=>true}, {"config/environment.rb"=>true}]
-   }, :services => services}
+  {
+    :runtime_info => {
+      :name => "ruby18",
+      :version => "1.8.7",
+      :description => "Ruby 1.8.7",
+      :executable => "/usr/bin/ruby",
+      :bundler => spec_bundler_cmd("ruby18"),
+      :environment => {"bundle_gemfile" => nil}
+    },
+    :framework_info => {
+       :name => "rails3",
+       :runtimes => [{"ruby18" => {"default" => true}}, {"ruby19" => {"default" => false}}],
+       :detection => [{"config/application.rb" => true}, {"config/environment.rb" => true}]
+    },
+    :services => services
+  }
 end

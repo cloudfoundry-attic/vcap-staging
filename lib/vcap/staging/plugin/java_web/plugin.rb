@@ -1,4 +1,4 @@
-require File.expand_path('../../common', __FILE__)
+require File.expand_path('../../staging_plugin', __FILE__)
 require File.join(File.expand_path('../', __FILE__), 'tomcat.rb')
 
 class JavaWebPlugin < StagingPlugin

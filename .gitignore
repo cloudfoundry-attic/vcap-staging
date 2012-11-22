@@ -1,2 +1,4 @@
+.rvmrc
+.idea
 /*.gem
-vendor/cache/vcap_staging-0.1.31.gem
+pkg

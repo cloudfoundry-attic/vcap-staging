@@ -2,20 +2,16 @@ module RailsDatabaseSupport
   # Prepares a database.yml file for the app, if needed.
   # Returns the service binding that was used for the 'production' db entry.
   def configure_database
-    bindings = bound_databases
-    case bindings.size
-    when 0
-      # nothing to do
-    when 1
-      write_database_yaml(bindings.first)
-    else
-      configure_multiple_databases(bindings)
-    end
+    write_database_yaml if bound_database
+  end
+
+  def database_uri
+    "#{database_type}://#{credentials['username']}:#{credentials['password']}@#{credentials['host']}:#{credentials['port']}/#{credentials['database']}"
   end
 
   # Actually lay down a database.yml in the app's config directory.
-  def write_database_yaml(binding)
-    data = database_config_for(binding)
+  def write_database_yaml
+    data = database_config
     conf = File.join(destination_directory, 'app', 'config', 'database.yml')
     settings = File.exists?(conf) ? YAML.load_file(conf) : {}
     settings['production']=data
@@ -25,33 +21,47 @@ module RailsDatabaseSupport
     binding
   end
 
-  def configure_multiple_databases(bindings)
-    # Where possible, select one named '^.*production' or 'prod' before failing.
-    production_db = bindings.detect { |b| b[:name] && b[:name] =~ /^.*production$|^.*prod$/ }
-    if production_db
-      write_database_yaml(production_db)
+  def bound_database
+    case bound_databases.size
+    when 0
+      nil
+    when 1
+      bound_databases.first
     else
-      raise "Unable to determine primary database from multiple.  " +
-        "Please bind only one database service to Rails applications."
+      binding = bound_databases.detect { |b| b[:name] && b[:name] =~ /^.*production$|^.*prod$/ }
+      if !binding
+        raise "Unable to determine primary database from multiple. " +
+              "Please bind only one database service to Rails applications."
+      end
+      binding
     end
   end
 
-  def database_config_for(binding)
-    case binding[:label]
-    when /^mysql/
-      { 'adapter' => 'mysql2', 'encoding' => 'utf8', 'pool' => 5,
-        'reconnect' => false }.merge(credentials_from(binding))
-    when /^postgresql/
-      { 'adapter' => 'postgresql', 'encoding' => 'utf8', 'pool' => 5,
-        'reconnect' => false }.merge(credentials_from(binding))
-    else
-      raise "Unable to configure unknown database: #{binding.inspect}"
+  def database_type
+    case bound_database[:label]
+      when /^mysql/
+        :mysql
+      when /^postgres/
+        :postgres
+      else
+        raise "Unable to configure unknown database: #{binding.inspect}"
     end
+  end
+
+  DATABASE_TO_ADAPTER_MAPPING = {
+      :mysql => 'mysql2',
+      :postgres => 'postgresql'
+  }
+
+
+  def database_config
+      { 'adapter' =>  DATABASE_TO_ADAPTER_MAPPING[database_type], 'encoding' => 'utf8', 'pool' => 5,
+        'reconnect' => false }.merge(credentials)
   end
 
   # return host, port, username, password, and database
-  def credentials_from(binding)
-    creds = binding[:credentials]
+  def credentials
+    creds = bound_database[:credentials]
     unless creds
       raise "Database binding failed to include credentials"
     end
@@ -61,7 +71,7 @@ module RailsDatabaseSupport
   end
 
   def bound_databases
-    bound_services.select { |binding| known_database?(binding) }
+    @bound_services ||= bound_services.select { |binding| known_database?(binding) }
   end
 
   def known_database?(binding)

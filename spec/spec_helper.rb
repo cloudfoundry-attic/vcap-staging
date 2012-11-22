@@ -1,4 +1,4 @@
-require 'vcap/staging/plugin/common'
+require 'vcap/staging/plugin/staging_plugin'
 
 require File.expand_path('../support/custom_matchers', __FILE__)
 require File.expand_path('../support/staging_spec_helpers', __FILE__)

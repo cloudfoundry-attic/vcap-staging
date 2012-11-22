@@ -9,7 +9,7 @@ module SecureOperations
   # Run a process as a secure user, if @uid is set.
   # Otherwise, process is run as current user
   # Use the "where" variable to set the process working dir,
-  def run_secure(cmd, where, options={})
+  def run_secure(cmd, where = Dir.pwd, options={})
     exitstatus = nil
     output = nil
 
