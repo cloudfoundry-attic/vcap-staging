@@ -22,10 +22,11 @@ export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AU
 export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+DROPLET_BASE_DIR=$PWD
 cd app
-ruby app.rb > ../logs/stdout.log 2> ../logs/stderr.log &
+ruby app.rb > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
         EXPECTED
         end
@@ -66,10 +67,11 @@ export RUBYOPT="-I$PWD/ruby  -rcfautoconfig -rstdsync"
 export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+DROPLET_BASE_DIR=$PWD
 cd app
-ruby app.rb > ../logs/stdout.log 2> ../logs/stderr.log &
+ruby app.rb > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
         EXPECTED
         end
@@ -114,10 +116,11 @@ export RUBYOPT="-rubygems -I$PWD/ruby -rstdsync"
 export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+DROPLET_BASE_DIR=$PWD
 cd app
-ruby hello.rb > ../logs/stdout.log 2> ../logs/stderr.log &
+ruby hello.rb > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
           EXPECTED
         end
@@ -135,10 +138,11 @@ export RUBYOPT="-rubygems -I$PWD/ruby -rstdsync"
 export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+DROPLET_BASE_DIR=$PWD
 cd app
-ruby hello.rb > ../logs/stdout.log 2> ../logs/stderr.log &
+ruby hello.rb > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
           EXPECTED
         end
@@ -159,10 +163,11 @@ wait $STARTED
 #!/bin/bash
 export JAVA_OPTS="$JAVA_OPTS -Xms512m -Xmx512m -Djava.io.tmpdir=$PWD/tmp"
 export TMPDIR="$PWD/tmp"
+DROPLET_BASE_DIR=$PWD
 cd app
-java $JAVA_OPTS HelloWorld > ../logs/stdout.log 2> ../logs/stderr.log &
+java $JAVA_OPTS HelloWorld > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
           EXPECTED
         end
@@ -188,10 +193,11 @@ wait $STARTED
 #!/bin/bash
 export PYTHONUNBUFFERED="true"
 export TMPDIR="$PWD/tmp"
+DROPLET_BASE_DIR=$PWD
 cd app
-python HelloWorld.py > ../logs/stdout.log 2> ../logs/stderr.log &
+python HelloWorld.py > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
           EXPECTED
         end
