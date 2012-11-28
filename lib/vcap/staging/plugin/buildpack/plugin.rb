@@ -8,9 +8,9 @@ class BuildpackPlugin < StagingPlugin
     Dir.chdir(destination_directory) do
       create_app_directories
       copy_source_files
-      #Bundler.with_clean_env do
+      Bundler.with_clean_env do
         build_pack.compile
-      #end
+      end
       create_startup_script
       create_stop_script
     end
