@@ -18,6 +18,8 @@ class BuildpackPlugin < StagingPlugin
 
   def build_pack
     @build_pack ||= installers.detect(&:detect)
+    raise "Unable to detect a supported application type" unless @build_pack
+    @build_pack
   end
 
   def buildpacks_path
@@ -83,7 +85,9 @@ BASH
 
     def compile
       logger.info "Installing #{buildpack}."
-      logger.info run_secure("#{command('compile')} /tmp/foo")[1]
+      return_code, output = run_secure("#{command('compile')} /tmp/foo")
+      logger.info output
+      raise "Buildpack compilation step failed:\n#{output}" unless return_code == 0
     end
 
     def release_info
