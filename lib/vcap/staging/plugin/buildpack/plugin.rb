@@ -33,7 +33,19 @@ class BuildpackPlugin < StagingPlugin
   end
 
   def start_command
-    release_info["default_process_types"]["web"]
+    procfile["web"] || release_info.fetch("default_process_types", {})["web"] || raise("Please specify a web start command using a Procfile")
+  end
+
+  def procfile
+    @procfile ||= procfile_contents ? YAML.load(procfile_contents) : {}
+    raise "Invalid Procfile format.  Please ensure it is a valid YAML hash" unless @procfile.kind_of?(Hash)
+    @procfile
+  end
+
+  def procfile_contents
+    procfile_path = 'app/Procfile'
+
+    File.read(procfile_path) if File.exists?(procfile_path)
   end
 
   def startup_script

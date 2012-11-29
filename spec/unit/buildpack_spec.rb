@@ -76,7 +76,7 @@ fi
         start_script = File.join(staged_dir, 'startup')
         start_script.should be_executable_file
         script_body = File.read(start_script)
-        script_body.should include("node bin/app.js > ../logs/stdout.log 2> ../logs/stderr.log &")
+        script_body.should include("node app.js > ../logs/stdout.log 2> ../logs/stderr.log &")
       end
     end
   end
@@ -86,6 +86,28 @@ fi
       app_fixture :phpinfo
 
       expect { stage buildpack_staging_env }.to raise_error "Unable to detect a supported application type"
+    end
+  end
+
+  describe "Procfile support" do
+    it "uses the 'web' process start command" do
+      app_fixture :node_deps_native
+      stage buildpack_staging_env do |staged_dir|
+        start_script = File.join(staged_dir, 'startup')
+        start_script.should be_executable_file
+        script_body = File.read(start_script)
+        script_body.should include("node app.js > ../logs/stdout.log 2> ../logs/stderr.log &")
+      end
+    end
+
+    it "raises an error if the buildpack does not provide a default start command and there is no procfile" do
+      app_fixture :node_without_procfile
+      expect { stage buildpack_staging_env }.to raise_error("Please specify a web start command using a Procfile")
+    end
+
+    it "raise a good error if the procfile is not a hash" do
+      app_fixture :node_invalid_procfile
+      expect { stage buildpack_staging_env }.to raise_error("Invalid Procfile format.  Please ensure it is a valid YAML hash")
     end
   end
 
