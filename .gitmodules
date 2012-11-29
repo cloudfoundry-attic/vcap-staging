@@ -4,3 +4,6 @@
 [submodule "vendor/buildpacks/ruby"]
 	path = vendor/buildpacks/ruby
 	url = https://github.com/heroku/heroku-buildpack-ruby
+[submodule "vendor/buildpacks/nodejs"]
+	path = vendor/buildpacks/nodejs
+	url = https://github.com/heroku/heroku-buildpack-nodejs

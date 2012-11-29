@@ -66,6 +66,29 @@ fi
     end
   end
 
+  context "with a node app" do
+    before do
+      app_fixture :node_deps_native
+    end
+
+    it "gives it a start command" do
+      stage buildpack_staging_env do |staged_dir|
+        start_script = File.join(staged_dir, 'startup')
+        start_script.should be_executable_file
+        script_body = File.read(start_script)
+        script_body.should include("node bin/app.js > ../logs/stdout.log 2> ../logs/stderr.log &")
+      end
+    end
+  end
+
+  context "when staging an app which does not match any build packs" do
+    it "raises an error" do
+      app_fixture :phpinfo
+
+      expect { stage buildpack_staging_env }.to raise_error "Unable to detect a supported application type"
+    end
+  end
+
   def postgres_service
     {:label=>"postgresql-9.0",
       :credentials=> {
