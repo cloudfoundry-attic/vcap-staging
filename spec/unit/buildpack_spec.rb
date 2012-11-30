@@ -3,18 +3,18 @@ require 'spec_helper'
 describe "Buildpack Plugin" do
   context "with a rails 3 app" do
     before do
-      app_fixture :rails3_no_assets
+      app_fixture :rails3_with_ruby_version
     end
 
     it "copies app to the destination" do
       stage buildpack_staging_env do |staged_dir|
-        File.should be_file("#{staged_dir}/app/app/controllers/application_controller.rb")
+        File.should be_file("#{staged_dir}/app/controllers/application_controller.rb")
       end
     end
 
     it "creates vendor/ruby directory" do
       stage buildpack_staging_env do |staged_dir|
-        File.should be_directory("#{staged_dir}/app/vendor/ruby-1.9.2")
+        File.should be_directory("#{staged_dir}/vendor/ruby-1.9.2")
       end
     end
 
@@ -30,7 +30,6 @@ describe "Buildpack Plugin" do
       stage buildpack_staging_env([postgres_service]) do |staged_dir|
         start_script = File.join(staged_dir, 'startup')
         script_body = File.read(start_script)
-        script_body.should include('export HOME="$PWD/app"')
         script_body.should include('export GEM_PATH="${GEM_PATH:-vendor/bundle/ruby/1.9.1}"')
         script_body.should include('export RAILS_ENV')
         script_body.should include('export PORT="$VCAP_APP_PORT"')
@@ -44,8 +43,8 @@ describe "Buildpack Plugin" do
         start_script.should be_executable_file
         script_body = File.read(start_script)
         script_body.should  include(<<-EXPECTED)
-if [ -d app/.profile.d ]; then
-  for i in app/.profile.d/*.sh; do
+if [ -d .profile.d ]; then
+  for i in .profile.d/*.sh; do
     if [ -r $i ]; then
       . $i
     fi
@@ -61,7 +60,7 @@ fi
         start_script = File.join(staged_dir, 'startup')
         start_script.should be_executable_file
         script_body = File.read(start_script)
-        script_body.should include("bundle exec thin start -R config.ru -e $RAILS_ENV -p $PORT > ../logs/stdout.log 2> ../logs/stderr.log &")
+        script_body.should include("bundle exec thin start -R config.ru -e $RAILS_ENV -p $PORT > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &")
       end
     end
   end
@@ -76,7 +75,7 @@ fi
         start_script = File.join(staged_dir, 'startup')
         start_script.should be_executable_file
         script_body = File.read(start_script)
-        script_body.should include("node app.js > ../logs/stdout.log 2> ../logs/stderr.log &")
+        script_body.should include("node app.js > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &")
       end
     end
   end
@@ -96,7 +95,7 @@ fi
         start_script = File.join(staged_dir, 'startup')
         start_script.should be_executable_file
         script_body = File.read(start_script)
-        script_body.should include("node app.js > ../logs/stdout.log 2> ../logs/stderr.log &")
+        script_body.should include("node app.js > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &")
       end
     end
 
