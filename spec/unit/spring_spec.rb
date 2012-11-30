@@ -36,10 +36,11 @@ if [ $PORT -lt 0 ] ; then
   exit 1
 fi
 ruby resources/generate_server_xml $PORT
+DROPLET_BASE_DIR=$PWD
 cd tomcat
-./bin/catalina.sh run > ../logs/stdout.log 2> ../logs/stderr.log &
+./bin/catalina.sh run > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
       EXPECTED
     end
@@ -69,10 +70,11 @@ if [ $PORT -lt 0 ] ; then
   exit 1
 fi
 ruby resources/generate_server_xml $PORT
+DROPLET_BASE_DIR=$PWD
 cd tomcat
-./bin/catalina.sh run > ../logs/stdout.log 2> ../logs/stderr.log &
+./bin/catalina.sh run > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
       EXPECTED
     end

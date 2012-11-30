@@ -35,10 +35,11 @@ if [ -n "$VCAP_CONSOLE_PORT" ]; then
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
+DROPLET_BASE_DIR=$PWD
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
       EXPECTED
     end
@@ -90,10 +91,11 @@ if [ -n "$VCAP_CONSOLE_PORT" ]; then
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
+DROPLET_BASE_DIR=$PWD
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
         EXPECTED
       end
@@ -150,10 +152,11 @@ if [ -n "$VCAP_CONSOLE_PORT" ]; then
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
+DROPLET_BASE_DIR=$PWD
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
         EXPECTED
       end
@@ -188,10 +191,11 @@ if [ -n "$VCAP_CONSOLE_PORT" ]; then
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
+DROPLET_BASE_DIR=$PWD
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
         EXPECTED
       end
@@ -230,10 +234,11 @@ if [ -n "$VCAP_CONSOLE_PORT" ]; then
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
+DROPLET_BASE_DIR=$PWD
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
         EXPECTED
       end
@@ -338,10 +343,11 @@ if [ -n "$VCAP_CONSOLE_PORT" ]; then
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
+DROPLET_BASE_DIR=$PWD
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
          EXPECTED
       end
@@ -376,10 +382,11 @@ if [ -n "$VCAP_CONSOLE_PORT" ]; then
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
+DROPLET_BASE_DIR=$PWD
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
         EXPECTED
       end

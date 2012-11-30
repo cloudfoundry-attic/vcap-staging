@@ -43,16 +43,25 @@ class BuildpackPlugin < StagingPlugin
   end
 
   def procfile_contents
-    procfile_path = 'app/Procfile'
+    procfile_path = 'Procfile'
 
     File.read(procfile_path) if File.exists?(procfile_path)
+  end
+
+  def app_dir
+    File.join(destination_directory) #TODO: Think about this
+  end
+
+  def change_directory_for_start
+    ""
   end
 
   def startup_script
     generate_startup_script(environment_variables) do
       <<-BASH
-if [ -d app/.profile.d ]; then
-  for i in app/.profile.d/*.sh; do
+unset GEM_PATH
+if [ -d .profile.d ]; then
+  for i in .profile.d/*.sh; do
     if [ -r $i ]; then
       . $i
     fi
@@ -73,14 +82,12 @@ BASH
     vars.each { |k, v| vars[k] = "${#{k}:-#{v}}" }
     vars["PORT"] = "$VCAP_APP_PORT"
     vars["DATABASE_URL"] = database_uri if bound_database
-    vars["HOME"]= "$PWD/app"
     vars
   end
 
   def stop_script
     generate_stop_script
   end
-
 
   class BuildpackInstaller < Struct.new(:buildpack, :buildpack_path, :app_dir, :logger)
     include SecureOperations
@@ -97,7 +104,7 @@ BASH
 
     def compile
       logger.info "Installing #{buildpack}."
-      return_code, output = run_secure("#{command('compile')} /tmp/foo")
+      return_code, output = run_secure("#{command('compile')} /tmp/bundler_cache")
       logger.info output
       raise "Buildpack compilation step failed:\n#{output}" unless return_code == 0
     end
