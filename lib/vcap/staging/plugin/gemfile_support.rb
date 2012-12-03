@@ -50,7 +50,7 @@ module GemfileSupport
   end
 
   def bundle_without
-    excluded_groups = "test"
+    excluded_groups= @bundle_without || "test"
     without = environment[:environment].find {|env| env =~ /\ABUNDLE_WITHOUT=/} if environment[:environment]
     if without
       if without.split('=').last.strip == "BUNDLE_WITHOUT"
