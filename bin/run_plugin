@@ -1,0 +1,16 @@
+require "rubygems"
+require "bundler/setup"
+
+$:.unshift(File.expand_path("../../lib", __FILE__))
+
+require "vcap/staging/plugin/staging_plugin"
+
+unless ARGV.length == 2
+  puts "Usage: run_plugin [plugin name] [plugin config file]"
+  exit 1
+end
+
+plugin_name, config_path = ARGV
+
+plugin = StagingPlugin.load_plugin_for(plugin_name).from_file(config_path)
+plugin.stage_application
