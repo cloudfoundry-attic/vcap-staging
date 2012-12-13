@@ -13,10 +13,11 @@ describe "A Play app being staged" do
       script_body.should == <<-EXPECTED
 #!/bin/bash
 export TMPDIR="$PWD/tmp"
+DROPLET_BASE_DIR=$PWD
 cd app
-./start -Xms256m -Xmx256m -Dhttp.port=$VCAP_APP_PORT -Djava.io.tmpdir=$PWD/tmp $JAVA_OPTS > ../logs/stdout.log 2> ../logs/stderr.log &
+./start -Xms256m -Xmx256m -Dhttp.port=$VCAP_APP_PORT -Djava.io.tmpdir=$PWD/tmp $JAVA_OPTS > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
       EXPECTED
     end
