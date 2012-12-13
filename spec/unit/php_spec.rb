@@ -18,10 +18,11 @@ describe "A PHP application being staged" do
 export TMPDIR="$PWD/tmp"
 env > env.log
 ruby resources/generate_apache_conf $VCAP_APP_PORT $HOME $VCAP_SERVICES 512m
+DROPLET_BASE_DIR=$PWD
 cd apache
-bash ./start.sh > ../logs/stdout.log 2> ../logs/stderr.log &
+bash ./start.sh > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
       EXPECTED
     end
@@ -37,10 +38,11 @@ wait $STARTED
 export TMPDIR="$PWD/tmp"
 env > env.log
 ruby resources/generate_apache_conf $VCAP_APP_PORT $HOME $VCAP_SERVICES 256m
+DROPLET_BASE_DIR=$PWD
 cd apache
-bash ./start.sh > ../logs/stdout.log 2> ../logs/stderr.log &
+bash ./start.sh > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
       EXPECTED
     end
