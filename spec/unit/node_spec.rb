@@ -25,10 +25,11 @@ describe "A simple Node.js app being staged" do
       script_body.should == <<-EXPECTED
 #!/bin/bash
 export TMPDIR="$PWD/tmp"
+DROPLET_BASE_DIR=$PWD
 cd app
-%VCAP_LOCAL_RUNTIME% $NODE_ARGS autoconfig.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+%VCAP_LOCAL_RUNTIME% $NODE_ARGS autoconfig.js $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
 EXPECTED
       autoconfig_script = File.join(staged_dir, "app", "autoconfig.js")
@@ -58,10 +59,11 @@ describe "A Node.js app with auto-config options being staged" do
         script_body.should == <<-EXPECTED
 #!/bin/bash
 export TMPDIR="$PWD/tmp"
+DROPLET_BASE_DIR=$PWD
 cd app
-%VCAP_LOCAL_RUNTIME% $NODE_ARGS app.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+%VCAP_LOCAL_RUNTIME% $NODE_ARGS app.js $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
 EXPECTED
       end
@@ -82,10 +84,11 @@ EXPECTED
         script_body.should == <<-EXPECTED
 #!/bin/bash
 export TMPDIR="$PWD/tmp"
+DROPLET_BASE_DIR=$PWD
 cd app
-%VCAP_LOCAL_RUNTIME% $NODE_ARGS app.js $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+%VCAP_LOCAL_RUNTIME% $NODE_ARGS app.js $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
 EXPECTED
       end
@@ -128,10 +131,11 @@ EXPECTED
         script_body.should == <<-EXPECTED
 #!/bin/bash
 export TMPDIR="$PWD/tmp"
+DROPLET_BASE_DIR=$PWD
 cd app
-%VCAP_LOCAL_RUNTIME% $NODE_ARGS autoconfig.js ./bin/app.coffee World $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+%VCAP_LOCAL_RUNTIME% $NODE_ARGS autoconfig.js ./bin/app.coffee World $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
 EXPECTED
 

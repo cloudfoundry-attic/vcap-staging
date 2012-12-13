@@ -18,10 +18,11 @@ export RUBYOPT="-rubygems -I$PWD/ruby -rstdsync"
 export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+DROPLET_BASE_DIR=$PWD
 cd app
-#{executable} app.rb $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} app.rb $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
       EXPECTED
     end
@@ -57,10 +58,11 @@ export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AU
 export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
+DROPLET_BASE_DIR=$PWD
 cd app
-#{executable} #{sinatra_staging_env[:runtime_info][:bundler]} exec #{executable} ./app.rb $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} #{sinatra_staging_env[:runtime_info][:bundler]} exec #{executable} ./app.rb $@ > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 STARTED=$!
-echo "$STARTED" >> ../run.pid
+echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
 wait $STARTED
       EXPECTED
       end
