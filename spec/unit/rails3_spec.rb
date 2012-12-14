@@ -18,7 +18,7 @@ describe "A Rails 3 application being staged" do
 #!/bin/bash
 export DISABLE_AUTO_CONFIG="mysql:postgresql"
 export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
-export GEM_PATH="$PWD/app/rubygems/ruby/1.8:$GEM_PATH"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
@@ -26,17 +26,17 @@ export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
-  cd app && #{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
 fi
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
-  #{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
+  #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
   CONSOLE_STARTED=$!
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
 echo "$STARTED" >> ../run.pid
 wait $STARTED
@@ -73,7 +73,7 @@ gem "cf-autoconfig"
 #!/bin/bash
 export DISABLE_AUTO_CONFIG="mysql:postgresql"
 export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
-export GEM_PATH="$PWD/app/rubygems/ruby/1.8:$GEM_PATH"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
@@ -81,17 +81,17 @@ export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
-  cd app && #{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
 fi
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
-  #{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
+  #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
   CONSOLE_STARTED=$!
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
 echo "$STARTED" >> ../run.pid
 wait $STARTED
@@ -133,7 +133,7 @@ wait $STARTED
 #!/bin/bash
 export DISABLE_AUTO_CONFIG="mysql:postgresql"
 export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
-export GEM_PATH="$PWD/app/rubygems/ruby/1.8:$GEM_PATH"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
@@ -141,17 +141,17 @@ export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
-  cd app && #{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
 fi
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
-  #{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
+  #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
   CONSOLE_STARTED=$!
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
 echo "$STARTED" >> ../run.pid
 wait $STARTED
@@ -174,7 +174,7 @@ wait $STARTED
 #!/bin/bash
 export DISABLE_AUTO_CONFIG="mysql:postgresql"
 export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
-export GEM_PATH="$PWD/app/rubygems/ruby/1.8:$GEM_PATH"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -rstdsync"
@@ -183,13 +183,13 @@ mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
-  #{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
+  #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
   CONSOLE_STARTED=$!
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
 echo "$STARTED" >> ../run.pid
 wait $STARTED
@@ -213,7 +213,7 @@ wait $STARTED
 #!/bin/bash
 export DISABLE_AUTO_CONFIG="mysql:postgresql"
 export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
-export GEM_PATH="$PWD/app/rubygems/ruby/1.8:$GEM_PATH"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
@@ -221,17 +221,17 @@ export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
-  cd app && #{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
 fi
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
-  #{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
+  #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
   CONSOLE_STARTED=$!
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
 echo "$STARTED" >> ../run.pid
 wait $STARTED
@@ -321,7 +321,7 @@ wait $STARTED
 #!/bin/bash
 export DISABLE_AUTO_CONFIG="mysql:postgresql"
 export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
-export GEM_PATH="$PWD/app/rubygems/ruby/1.8:$GEM_PATH"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
@@ -329,17 +329,17 @@ export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -f "$PWD/app/config/database.yml" ] ; then
-  cd app && #{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
+  cd app && #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rake db:migrate --trace >>../logs/migration.log 2>> ../logs/migration.log && cd ..;
 fi
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
-  #{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
+  #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
   CONSOLE_STARTED=$!
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rails server $@ > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
 echo "$STARTED" >> ../run.pid
 wait $STARTED
@@ -362,7 +362,7 @@ wait $STARTED
 #!/bin/bash
 export DISABLE_AUTO_CONFIG="mysql:postgresql"
 export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
-export GEM_PATH="$PWD/app/rubygems/ruby/1.8:$GEM_PATH"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RAILS_ENV="${RAILS_ENV:-production}"
 export RUBYOPT="-I$PWD/ruby -rstdsync"
@@ -371,13 +371,13 @@ mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 if [ -n "$VCAP_CONSOLE_PORT" ]; then
   cd app
-  #{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
+  #{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} cf-rails-console/rails_console.rb >>../logs/console.log 2>> ../logs/console.log &
   CONSOLE_STARTED=$!
   echo "$CONSOLE_STARTED" >> ../console.pid
   cd ..
 fi
 cd app
-#{executable} #{rails_staging_env[:runtime_info][:bundler]} exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} ./rubygems/ruby/1.8/bin/rails server thin $@ > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
 echo "$STARTED" >> ../run.pid
 wait $STARTED
@@ -439,7 +439,6 @@ def rails_staging_env(services=[])
      :version => "1.8.7",
      :description => "Ruby 1.8.7",
      :executable => "/usr/bin/ruby",
-     :bundler => spec_bundler_cmd("ruby18"),
      :environment => {"bundle_gemfile"=>nil}
    },
    :framework_info => {

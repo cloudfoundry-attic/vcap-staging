@@ -5,6 +5,7 @@ require "uuidtools"
 class Rails3Plugin < StagingPlugin
   include GemfileSupport
   include RailsDatabaseSupport
+  include RubyAutoconfig
   include SecureOperations
 
   # PWD here is after we change to the 'app' directory.
@@ -12,10 +13,15 @@ class Rails3Plugin < StagingPlugin
     if uses_bundler?
       # Specify Thin if the app bundled it; otherwise let Rails figure it out.
       server_script = thin? ? "server thin" : "server"
-      "#{local_runtime} #{bundler_cmd} exec #{local_runtime} ./#{gem_bin_dir}/rails #{server_script} $@"
+      "#{local_runtime} #{gem_bin_dir}/bundle exec #{local_runtime} #{gem_bin_dir}/rails #{server_script} $@"
     else
       "#{local_runtime} -S thin -R config.ru $@ start"
     end
+  end
+
+  # Returns a path relative to the 'app' directory.
+  def gem_bin_dir
+    "./rubygems/ruby/#{library_version}/bin"
   end
 
   def migration_enabled?
@@ -31,7 +37,7 @@ class Rails3Plugin < StagingPlugin
 
   def migration_command
     if uses_bundler?
-      "#{local_runtime} #{bundler_cmd} exec #{local_runtime} ./#{gem_bin_dir}/rake db:migrate --trace"
+      "#{local_runtime} #{gem_bin_dir}/bundle exec #{local_runtime} #{gem_bin_dir}/rake db:migrate --trace"
     else
       "#{local_runtime} -S rake db:migrate --trace"
     end
@@ -39,7 +45,7 @@ class Rails3Plugin < StagingPlugin
 
   def console_command
    if uses_bundler?
-      "#{local_runtime} #{bundler_cmd} exec #{local_runtime} cf-rails-console/rails_console.rb"
+      "#{local_runtime} #{gem_bin_dir}/bundle exec #{local_runtime} cf-rails-console/rails_console.rb"
     else
       "#{local_runtime} cf-rails-console/rails_console.rb"
     end
@@ -55,7 +61,7 @@ class Rails3Plugin < StagingPlugin
     # TODO: set this options by default or turn on live compilation
     # or make cfautoconfig work on stager
     if uses_bundler?
-      "#{cmd} #{bundler_cmd} exec ./#{gem_bin_dir}/rake assets:precompile"
+      "#{cmd} #{gem_bin_dir}/bundle exec #{gem_bin_dir}/rake assets:precompile"
     else
       "#{cmd} -S rake assets:precompile"
     end
@@ -109,7 +115,17 @@ class Rails3Plugin < StagingPlugin
   end
 
   def startup_script
-    vars = ruby_startup_vars
+    vars = {}
+    # PWD here is before we change to the 'app' directory.
+    if uses_bundler?
+      vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:$PATH"
+      vars['GEM_PATH'] = vars['GEM_HOME'] = "$PWD/app/rubygems/ruby/#{library_version}"
+    end
+    if autoconfig_enabled?
+      vars['RUBYOPT'] = "-I$PWD/ruby #{autoconfig_load_path} -rcfautoconfig -rstdsync"
+    else
+      vars['RUBYOPT'] = '-I$PWD/ruby -rstdsync'
+    end
     vars['DISABLE_AUTO_CONFIG'] = 'mysql:postgresql'
     vars['RAILS_ENV'] = '${RAILS_ENV:-production}'
     generate_startup_script(vars) do

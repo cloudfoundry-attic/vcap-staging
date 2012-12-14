@@ -79,6 +79,10 @@ class GemfileTask
     end
   end
 
+  def install_bundler
+    install_gem("bundler", "1.1.3")
+  end
+
   def install_local_gem(gem_dir, gem_filename)
     blessed_gem_path = File.join(@blessed_gems_dir, gem_filename)
     if File.exists?(blessed_gem_path)

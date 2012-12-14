@@ -1,5 +1,6 @@
 class SinatraPlugin < StagingPlugin
   include GemfileSupport
+  include RubyAutoconfig
 
   def resource_dir
     File.join(File.dirname(__FILE__), 'resources')
@@ -19,9 +20,11 @@ class SinatraPlugin < StagingPlugin
   # Sinatra has a non-standard startup process.
   # TODO - Synthesize a 'config.ru' file for each app to avoid this.
   def start_command
-    sinatra_main = detect_main_file
-    if uses_bundler?
-      "#{local_runtime} #{bundler_cmd} exec #{local_runtime} ./#{sinatra_main} $@"
+     sinatra_main = detect_main_file
+    if uses_bundler? && autoconfig_enabled?
+      "#{local_runtime} ./rubygems/ruby/#{library_version}/bin/bundle exec #{local_runtime} -rcfautoconfig ./#{sinatra_main} $@"
+    elsif uses_bundler?
+      "#{local_runtime} ./rubygems/ruby/#{library_version}/bin/bundle exec #{local_runtime} ./#{sinatra_main} $@"
     else
       "#{local_runtime} #{sinatra_main} $@"
     end
@@ -29,7 +32,14 @@ class SinatraPlugin < StagingPlugin
 
   private
   def startup_script
-    vars = ruby_startup_vars
+    vars = {}
+    if uses_bundler?
+      vars['PATH'] = "$PWD/app/rubygems/ruby/#{library_version}/bin:$PATH"
+      vars['GEM_PATH'] = vars['GEM_HOME'] = "$PWD/app/rubygems/ruby/#{library_version}"
+      vars['RUBYOPT'] = "-I$PWD/ruby #{autoconfig_load_path} -rstdsync"
+    else
+      vars['RUBYOPT'] = "-rubygems -I$PWD/ruby -rstdsync"
+    end
     vars['RACK_ENV'] = '${RACK_ENV:-production}'
     # PWD here is after we change to the 'app' directory.
     generate_startup_script(vars) do
@@ -59,3 +69,4 @@ class SinatraPlugin < StagingPlugin
     file
   end
 end
+

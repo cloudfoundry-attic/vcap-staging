@@ -41,15 +41,15 @@ wait $STARTED
         script_body.should == <<-EXPECTED
 #!/bin/bash
 export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
-export GEM_PATH="$PWD/app/rubygems/ruby/1.8:$GEM_PATH"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RACK_ENV="${RACK_ENV:-production}"
-export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
+export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rstdsync"
 export TMPDIR="$PWD/tmp"
 mkdir ruby
 echo "\\$stdout.sync = true" >> ./ruby/stdsync.rb
 cd app
-#{executable} #{rack_staging_env[:runtime_info][:bundler]} exec #{executable} -S ./rubygems/ruby/1.8/bin/rackup $@ config.ru -E $RACK_ENV > ../logs/stdout.log 2> ../logs/stderr.log &
+#{executable} ./rubygems/ruby/1.8/bin/bundle exec #{executable} -rcfautoconfig -S ./rubygems/ruby/1.8/bin/rackup $@ config.ru -E $RACK_ENV > ../logs/stdout.log 2> ../logs/stderr.log &
 STARTED=$!
 echo "$STARTED" >> ../run.pid
 wait $STARTED
@@ -90,7 +90,6 @@ def rack_staging_env
      :version => "1.8.7",
      :description => "Ruby 1.8.7",
      :executable => "/usr/bin/ruby",
-     :bundler => spec_bundler_cmd("ruby18"),
      :environment => {"bundle_gemfile"=>nil}
    },
    :framework_info => {

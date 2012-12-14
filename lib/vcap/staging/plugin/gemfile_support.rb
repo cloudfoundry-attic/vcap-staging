@@ -1,8 +1,6 @@
-require File.expand_path("../gemfile_task", __FILE__)
-require File.expand_path("../ruby_autoconfig", __FILE__)
+require File.expand_path('../gemfile_task', __FILE__)
 
 module GemfileSupport
-  include RubyAutoconfig
 
   # OK, so this is our workhorse.
   # 1. If file has no Gemfile.lock we never attempt to outsmart it, just stage it as is.
@@ -21,6 +19,7 @@ module GemfileSupport
     return if packaged_with_bundler_in_deployment_mode?
 
     gem_task.install
+    gem_task.install_bundler
     gem_task.remove_gems_cached_in_app
 
     write_bundle_config
@@ -62,35 +61,6 @@ module GemfileSupport
       end
     end
     excluded_groups
-  end
-
-  def bundler_cmd
-    runtime[:bundler]
-  end
-
-  def ruby_startup_vars(base_path = "$PWD")
-    vars = {}
-    if uses_bundler?
-      vars["PATH"] = "#{base_path}/app/#{gem_bin_dir}:$PATH"
-      vars["GEM_HOME"] = "#{base_path}/app/#{gem_base_dir}"
-      vars["GEM_PATH"] = "#{base_path}/app/#{gem_base_dir}:$GEM_PATH"
-      if autoconfig_enabled?
-        vars["RUBYOPT"] = "-I#{base_path}/ruby #{autoconfig_load_path} -rcfautoconfig -rstdsync"
-      else
-        vars["RUBYOPT"] = "-I#{base_path}/ruby -rstdsync"
-      end
-    else
-      vars["RUBYOPT"] = "-rubygems -I#{base_path}/ruby -rstdsync"
-    end
-    vars
-  end
-
-  def gem_base_dir
-    "rubygems/ruby/#{library_version}"
-  end
-
-  def gem_bin_dir
-    "#{gem_base_dir}/bin"
   end
 
   # Can we expect to run this app on Rack?
