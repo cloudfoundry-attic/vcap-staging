@@ -16,7 +16,7 @@ describe "A Standalone app being staged" do
           script_body.should == <<-EXPECTED
 #!/bin/bash
 export GEM_HOME="$PWD/app/rubygems/ruby/1.8"
-export GEM_PATH="$PWD/app/rubygems/ruby/1.8:$GEM_PATH"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.8"
 export PATH="$PWD/app/rubygems/ruby/1.8/bin:$PATH"
 export RUBYOPT="-I$PWD/ruby -I$PWD/app/rubygems/ruby/1.8/gems/cf-autoconfig-#{AUTO_CONFIG_GEM_VERSION}/lib -rcfautoconfig -rstdsync"
 export TMPDIR="$PWD/tmp"
@@ -61,7 +61,7 @@ gem "cf-autoconfig"
           script_body.should == <<-EXPECTED
 #!/bin/bash
 export GEM_HOME="$PWD/app/rubygems/ruby/1.9.1"
-export GEM_PATH="$PWD/app/rubygems/ruby/1.9.1:$GEM_PATH"
+export GEM_PATH="$PWD/app/rubygems/ruby/1.9.1"
 export PATH="$PWD/app/rubygems/ruby/1.9.1/bin:$PATH"
 export RUBYOPT="-I$PWD/ruby  -rcfautoconfig -rstdsync"
 export TMPDIR="$PWD/tmp"
