@@ -80,7 +80,7 @@ class GemfileTask
   end
 
   def install_bundler
-    install_gem("bundler", "1.1.3")
+    install_gem("bundler", "1.2.1")
   end
 
   def install_local_gem(gem_dir, gem_filename)
