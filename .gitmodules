@@ -7,3 +7,6 @@
 [submodule "vendor/buildpacks/nodejs"]
 	path = vendor/buildpacks/nodejs
 	url = https://github.com/heroku/heroku-buildpack-nodejs
+[submodule "vendor/buildpacks/java-binary"]
+	path = vendor/buildpacks/java-binary
+	url = https://github.com/jencompgeek/heroku-buildpack-java-binary
