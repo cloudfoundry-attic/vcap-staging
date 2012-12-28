@@ -28,7 +28,7 @@ describe "Buildpack Plugin" do
   end
 
   def stores_everything_in_profile(staged_dir)
-    start_script = File.join(staged_dir, 'startup')
+    start_script = File.join(staged_dir, '.cloudfoundry','startup')
     start_script.should be_executable_file
     script_body = File.read(start_script)
     script_body.should include(<<-EXPECTED)
@@ -44,7 +44,7 @@ fi
   end
 
   def packages_with_start_script(staged_dir)
-    start_script = File.join(staged_dir, 'startup')
+    start_script = File.join(staged_dir, '.cloudfoundry', 'startup')
     start_script.should be_executable_file
     script_body = File.read(start_script)
     script_body.should include("bundle exec thin start -R config.ru -e $RAILS_ENV -p $PORT > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &")
@@ -54,12 +54,13 @@ fi
     app_fixture :rails3_with_ruby_version
 
     stage buildpack_staging_env([postgres_service]) do |staged_dir|
-      start_script = File.join(staged_dir, 'startup')
+      start_script = File.join(staged_dir, '.cloudfoundry', 'startup')
       script_body = File.read(start_script)
       script_body.should include('export GEM_PATH="${GEM_PATH:-vendor/bundle/ruby/1.9.1}"')
       script_body.should include('export RAILS_ENV')
       script_body.should include('export PORT="$VCAP_APP_PORT"')
       script_body.should include('export DATABASE_URL="postgres://testuser:test@myhost:345/mydb"')
+      script_body.should include('export TMPDIR="$PWD/.cloudfoundry/tmp"')
     end
   end
 
@@ -70,7 +71,7 @@ fi
 
     it "gives it a start command" do
       stage buildpack_staging_env do |staged_dir|
-        start_script = File.join(staged_dir, 'startup')
+        start_script = File.join(staged_dir, '.cloudfoundry', 'startup')
         start_script.should be_executable_file
         script_body = File.read(start_script)
         script_body.should include("node app.js > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &")
@@ -90,7 +91,7 @@ fi
     it "uses the 'web' process start command" do
       app_fixture :node_deps_native
       stage buildpack_staging_env do |staged_dir|
-        start_script = File.join(staged_dir, 'startup')
+        start_script = File.join(staged_dir, '.cloudfoundry', 'startup')
         start_script.should be_executable_file
         script_body = File.read(start_script)
         script_body.should include("node app.js > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &")

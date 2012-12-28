@@ -147,6 +147,10 @@ class StagingPlugin
     File.join(destination_directory, "tmp")
   end
 
+  def script_dir
+    destination_directory
+  end
+
   def framework
     environment[:framework_info]
   end
@@ -213,6 +217,10 @@ class StagingPlugin
     "wait $STARTED"
   end
 
+  def pidfile_dir
+    "$DROPLET_BASE_DIR"
+  end
+
   def generate_startup_script(env_vars = {})
     after_env_before_script = block_given? ? yield : "\n"
     template = <<-SCRIPT
@@ -223,7 +231,7 @@ DROPLET_BASE_DIR=$PWD
 <%= change_directory_for_start %>
 <%= start_command %> > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 <%= get_launched_process_pid %>
-echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
+echo "$STARTED" >> #{pidfile_dir}/run.pid
 <%= wait_for_launched_process %>
     SCRIPT
     # TODO - ERB is pretty irritating when it comes to blank lines, such as when 'after_env_before_script' is nil.
@@ -244,7 +252,7 @@ echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
   # If the value of one of the keys is false or nil, it will be an 'unset' instead of an 'export'
   def environment_statements_for(vars)
     # Passed vars should overwrite common vars
-    common_env_vars = { "TMPDIR" => "$PWD/tmp" }
+    common_env_vars = { "TMPDIR" => tmp_dir.gsub(destination_directory,"$PWD") }
     vars = common_env_vars.merge(vars)
     lines = []
     vars.each do |name, value|
@@ -264,7 +272,7 @@ echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
   end
 
   def create_stop_script()
-    path = File.join(destination_directory, 'stop')
+    path = File.join(script_dir, 'stop')
     File.open(path, 'wb') do |f|
       f.puts stop_script
     end
@@ -272,7 +280,7 @@ echo "$STARTED" >> $DROPLET_BASE_DIR/run.pid
   end
 
   def create_startup_script
-    path = File.join(destination_directory, 'startup')
+    path = File.join(script_dir, 'startup')
     File.open(path, 'wb') do |f|
       f.puts startup_script
     end
