@@ -13,7 +13,6 @@ class BuildpackPlugin < StagingPlugin
         build_pack.compile
       end
       create_startup_script
-      create_stop_script
     end
   end
 
@@ -34,7 +33,8 @@ class BuildpackPlugin < StagingPlugin
   end
 
   def start_command
-    procfile["web"] || release_info.fetch("default_process_types", {})["web"] || raise("Please specify a web start command using a Procfile")
+    procfile["web"] || release_info.fetch("default_process_types", {})["web"] ||
+        raise("Please specify a web start command using a Procfile")
   end
 
   def procfile
@@ -50,7 +50,19 @@ class BuildpackPlugin < StagingPlugin
   end
 
   def app_dir
-    File.join(destination_directory) #TODO: Think about this
+    destination_directory
+  end
+
+  def tmp_dir
+    File.join(destination_directory, ".cloudfoundry", "tmp")
+  end
+
+  def script_dir
+    File.join(destination_directory, ".cloudfoundry")
+  end
+
+  def pidfile_dir
+    File.join("$DROPLET_BASE_DIR",".cloudfoundry")
   end
 
   def change_directory_for_start
@@ -69,7 +81,7 @@ if [ -d .profile.d ]; then
   done
   unset i
 fi
-env > logs/my.log
+env > logs/env.log
 BASH
     end
   end
@@ -83,12 +95,7 @@ BASH
     vars.each { |k, v| vars[k] = "${#{k}:-#{v}}" }
     vars["PORT"] = "$VCAP_APP_PORT"
     vars["DATABASE_URL"] = database_uri if bound_database
-    vars["TMPDIR"] = "$PWD/tmp"
     vars["MEMORY_LIMIT"] = "#{application_memory}m"
     vars
-  end
-
-  def stop_script
-    generate_stop_script
   end
 end
