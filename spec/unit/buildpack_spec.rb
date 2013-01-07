@@ -32,7 +32,7 @@ describe "Buildpack Plugin" do
 
     it "puts the environment variables provided by 'release' into the startup script" do
       stage staging_env do |staged_dir|
-        start_script = File.join(staged_dir, '.cloudfoundry', 'startup')
+        start_script = File.join(staged_dir, 'startup')
         script_body = File.read(start_script)
         script_body.should include('export FROM_BUILD_PACK="${FROM_BUILD_PACK:-yes}"')
       end
@@ -40,7 +40,7 @@ describe "Buildpack Plugin" do
 
     it "stores everything in profile" do
       stage staging_env do |staged_dir|
-        start_script = File.join(staged_dir, '.cloudfoundry', 'startup')
+        start_script = File.join(staged_dir, 'startup')
         start_script.should be_executable_file
         script_body = File.read(start_script)
         script_body.should include(<<-EXPECTED)
@@ -127,7 +127,7 @@ fi
   end
 
   def packages_with_start_script(staged_dir, start_command)
-    start_script = File.join(staged_dir, '.cloudfoundry', 'startup')
+    start_script = File.join(staged_dir, 'startup')
     start_script.should be_executable_file
     script_body = File.read(start_script)
     script_body.should include("#{start_command} > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &")
