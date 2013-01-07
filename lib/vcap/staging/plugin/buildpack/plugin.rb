@@ -55,18 +55,6 @@ class BuildpackPlugin < StagingPlugin
     destination_directory
   end
 
-  def tmp_dir
-    File.join(destination_directory, ".cloudfoundry", "tmp")
-  end
-
-  def script_dir
-    File.join(destination_directory, ".cloudfoundry")
-  end
-
-  def pidfile_dir
-    File.join("$DROPLET_BASE_DIR",".cloudfoundry")
-  end
-
   def change_directory_for_start
     ""
   end
