@@ -33,8 +33,10 @@ class BuildpackPlugin < StagingPlugin
   end
 
   def start_command
-    procfile["web"] || release_info.fetch("default_process_types", {})["web"] ||
-        raise("Please specify a web start command using a Procfile")
+    return environment[:meta][:command] if environment[:meta] && environment[:meta][:command]
+    procfile["web"] ||
+      release_info.fetch("default_process_types", {})["web"] ||
+        raise("Please specify a web start command in your manifest.yml or Procfile")
   end
 
   def procfile
