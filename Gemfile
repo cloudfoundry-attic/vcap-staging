@@ -7,4 +7,5 @@ gem 'vcap_common', '~> 2.0.0', :git => 'git://github.com/cloudfoundry/vcap-commo
 
 group :test do
   gem 'ci_reporter'
+  gem 'rr'
 end

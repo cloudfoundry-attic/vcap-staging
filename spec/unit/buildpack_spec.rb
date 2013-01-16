@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'vcap/staging/plugin/buildpack/plugin'
+require 'rr'
 
 describe "Buildpack Plugin" do
   let(:fake_buildpacks_dir) { File.expand_path("../../fixtures/fake_buildpacks", __FILE__) }
@@ -12,7 +13,9 @@ describe "Buildpack Plugin" do
   let(:app_without_procfile) { :node_without_procfile }
 
   before do
-    BuildpackPlugin.any_instance.stub(:buildpacks_path).and_return(Pathname.new(buildpacks_path))
+    any_instance_of(BuildpackPlugin) do |plugin|
+      stub(plugin).buildpacks_path { Pathname.new(buildpacks_path) }
+    end
   end
 
   shared_examples_for "successful buildpack compilation" do
@@ -58,6 +61,41 @@ fi
   end
 
   let(:staging_env) { buildpack_staging_env }
+
+  context "when a buildpack URL is passed" do
+    let(:buildpack_url) { "git://github.com/heroku/heroku-buildpack-java.git" }
+    let(:staging_env) { buildpack_staging_env.merge(:buildpack => buildpack_url) }
+    let(:plugin) { BuildpackPlugin.new(".", ".", staging_env) }
+
+    subject { plugin.build_pack }
+
+    it "clones the buildpack URL" do
+      mock(plugin).run_and_check(anything)  do |cmd|
+        expect(cmd).to match /git clone #{buildpack_url} #{plugin.app_dir}\/.buildpacks/
+        ["", true]
+      end
+
+      subject
+    end
+
+    it "does not try to detect the buildpack" do
+      stub(plugin).run_and_check(anything) { ["", true] }
+
+      plugin.installers.each do |i|
+        dont_allow(i).detect
+      end
+
+      subject
+    end
+
+    context "when the cloning fails" do
+      it "gives up and logs an error" do
+        stub(plugin).run_and_check(anything) { ["some failure output", false] }
+
+        expect {subject}.to raise_error("Failed to git clone buildpack:\nsome failure output")
+      end
+    end
+  end
 
   context "when a start command is passed" do
     let(:staging_env) { buildpack_staging_env.merge({:meta => {:command => "node app.js --from-manifest=true"}}) }
