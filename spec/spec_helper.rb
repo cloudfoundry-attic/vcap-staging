@@ -1,4 +1,5 @@
 require 'vcap/staging/plugin/staging_plugin'
+require 'rr'
 
 require File.expand_path('../support/custom_matchers', __FILE__)
 require File.expand_path('../support/staging_spec_helpers', __FILE__)
@@ -9,6 +10,8 @@ STAGING_TEMP = Dir.mktmpdir
 
 RSpec.configure do |config|
   config.include StagingSpecHelpers
+  config.mock_with :rr
+
   config.before(:all) do
     platform_hash = {}
     File.open(File.join(STAGING_TEMP, 'platform.yml'), 'wb') do |f|

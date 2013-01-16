@@ -56,6 +56,7 @@ GEM
     rack (1.4.1)
     rake (10.0.2)
     rb-readline (0.4.2)
+    rr (1.0.4)
     rspec (2.11.0)
       rspec-core (~> 2.11.0)
       rspec-expectations (~> 2.11.0)
@@ -81,6 +82,7 @@ DEPENDENCIES
   pry
   pry-remote
   rb-readline
+  rr
   rspec
   vcap_common (~> 2.0.0)!
   vcap_staging!
