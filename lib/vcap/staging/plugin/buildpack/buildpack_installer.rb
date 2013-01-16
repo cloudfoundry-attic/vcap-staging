@@ -1,15 +1,17 @@
-class BuildpackInstaller < Struct.new(:buildpack, :buildpack_path, :app_dir, :logger)
-  include SecureOperations
+require 'vcap/staging/plugin/shell_helpers'
+
+class BuildpackInstaller < Struct.new(:buildpack, :app_dir, :logger)
+  include ShellHelpers
 
   def detect
-    logger.info "Checking #{buildpack} ..."
+    logger.info "Checking #{buildpack.basename} ..."
     _, ok = run_and_check command('detect')
-    logger.info "Skipping #{buildpack}." unless ok
+    logger.info "Skipping #{buildpack.basename}." unless ok
     ok
   end
 
   def compile
-    logger.info "Installing #{buildpack}."
+    logger.info "Installing #{buildpack.basename}."
     output, ok = run_and_check "#{command('compile')} /tmp/bundler_cache"
     raise "Buildpack compilation step failed:\n#{output}" unless ok
   end
@@ -23,7 +25,7 @@ class BuildpackInstaller < Struct.new(:buildpack, :buildpack_path, :app_dir, :lo
   private
 
   def command(command_name)
-    "#{buildpack_path}/bin/#{command_name} #{app_dir}"
+    "#{buildpack}/bin/#{command_name} #{app_dir}"
   end
 
   def run_and_check(command)
