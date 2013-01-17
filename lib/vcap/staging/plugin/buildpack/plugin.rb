@@ -1,9 +1,12 @@
 require 'bundler'
+
+require "vcap/staging/plugin/shell_helpers"
 require 'vcap/staging/plugin/rails3/database_support'
 require_relative("buildpack_installer")
 
 class BuildpackPlugin < StagingPlugin
   include RailsDatabaseSupport
+  include ShellHelpers
 
   def stage_application
     Dir.chdir(destination_directory) do
@@ -16,9 +19,22 @@ class BuildpackPlugin < StagingPlugin
     end
   end
 
+  def clone_buildpack(buildpack_url)
+    buildpack_path = "#{app_dir}/.buildpacks/#{File.basename(buildpack_url)}"
+    output, ok = run_and_log("git clone #{buildpack_url} #{buildpack_path}")
+    raise "Failed to git clone buildpack:\n#{output}" unless ok
+    BuildpackInstaller.new(Pathname.new(buildpack_path), app_dir, logger)
+  end
+
   def build_pack
-    @build_pack ||= installers.detect(&:detect)
+    return @build_pack if @build_pack
+
+    custom_url = environment[:buildpack]
+    return @build_pack = clone_buildpack(custom_url) if custom_url
+
+    @build_pack = installers.detect(&:detect)
     raise "Unable to detect a supported application type" unless @build_pack
+
     @build_pack
   end
 
@@ -27,8 +43,8 @@ class BuildpackPlugin < StagingPlugin
   end
 
   def installers
-    buildpacks_path.children.map do |buildpack_path|
-      BuildpackInstaller.new(buildpack_path.basename, buildpack_path, app_dir, logger)
+    buildpacks_path.children.map do |buildpack|
+      BuildpackInstaller.new(buildpack, app_dir, logger)
     end
   end
 
