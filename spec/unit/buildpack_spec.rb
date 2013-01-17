@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'vcap/staging/plugin/buildpack/plugin'
+require 'rr'
 
 describe "Buildpack Plugin" do
   let(:fake_buildpacks_dir) { File.expand_path("../../fixtures/fake_buildpacks", __FILE__) }
@@ -12,7 +13,9 @@ describe "Buildpack Plugin" do
   let(:app_without_procfile) { :node_without_procfile }
 
   before do
-    BuildpackPlugin.any_instance.stub(:buildpacks_path).and_return(Pathname.new(buildpacks_path))
+    any_instance_of(BuildpackPlugin) do |plugin|
+      stub(plugin).buildpacks_path { Pathname.new(buildpacks_path) }
+    end
   end
 
   shared_examples_for "successful buildpack compilation" do

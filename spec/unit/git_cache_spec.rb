@@ -8,7 +8,7 @@ describe GitCache do
     sha1 = Digest::SHA1.hexdigest("git://github.com/cloudfoundry/common.git")
     @uri_cache_dir = "%s/%s/%s/%s" % [ @cache_dir, sha1[0..1], sha1[2..3], sha1[4..-1] ]
 
-    logger = double("Logger").as_null_object
+    logger = mock!
     @cache = GitCache.new(@cache_dir, @compiled_cache_dir, logger)
 
     @source = {:uri => "git://github.com/cloudfoundry/common.git",

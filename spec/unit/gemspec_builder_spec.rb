@@ -30,7 +30,7 @@ describe "GemspecBuilder" do
   it "should log an error if problem determining gemspec extensions" do
     # Pass an invalid gemspec name
     gemspec = GemspecBuilder.new("foo", @ruby_cmd, @logger)
-    @logger.should_receive(:error).with("Failed checking for gem extensions from foo: -e:1:in `<main>': undefined method `extensions' for nil:NilClass (NoMethodError)")
+    mock(@logger).error("Failed checking for gem extensions from foo: -e:1:in `<main>': undefined method `extensions' for nil:NilClass (NoMethodError)")
     gemspec.requires_build?.should_not be true
   end
 
@@ -57,14 +57,14 @@ describe "GemspecBuilder" do
     gemspec_path = File.join(@working_dir, "gemtwo", "gemtwo.gemspec")
     gemspec = GemspecBuilder.new(gemspec_path, @ruby_cmd, @logger)
     new_gemspec_path = File.join("foo", "hello", "hello.gemspec")
-    @logger.should_receive(:error).with("Failed updating gemtwo.gemspec. Unable to copy gemspec to new path.")
+    mock(@logger).error("Failed updating gemtwo.gemspec. Unable to copy gemspec to new path.")
     gemspec.update_from_path(new_gemspec_path)
   end
 
   it "should log an error if problem updating gemspec" do
     # Pass an invalid gemspec name
     gemspec = GemspecBuilder.new("foo", @ruby_cmd, @logger)
-    @logger.should_receive(:error).with("Failed updating foo: -e:1:in `<main>': undefined method `to_ruby_for_cache' for nil:NilClass (NoMethodError)")
+    mock(@logger).error("Failed updating foo: -e:1:in `<main>': undefined method `to_ruby_for_cache' for nil:NilClass (NoMethodError)")
     gemspec.update
   end
 
@@ -78,7 +78,7 @@ describe "GemspecBuilder" do
 
   it "should raise an error if unable to build gem from gemspec" do
     gemspec = GemspecBuilder.new("foo", @ruby_cmd, @logger)
-    @logger.should_receive(:error).with("Failed building gem foo: ERROR:  Gemspec file not found: foo")
+    mock(@logger).error("Failed building gem foo: ERROR:  Gemspec file not found: foo")
     lambda {gemspec.build}.should raise_error "Failed building gem foo: ERROR:  Gemspec file not found: foo"
   end
 end

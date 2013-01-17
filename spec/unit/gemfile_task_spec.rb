@@ -60,10 +60,10 @@ describe "GemfileTask" do
 
     it "should install git gems from git and not rubygems" do
       installed_git_gems = []
-      @task.stub(:install_gem) do |name, version|
+      stub(@task).install_gem do |name, version|
         @git_gems.should_not include name
       end
-      @task.stub(:install_git_gem) do |spec|
+      stub(@task).install_git_gem do |spec|
         installed_git_gems << spec[:name]
       end
       @task.install
@@ -79,10 +79,10 @@ describe "GemfileTask" do
     end
 
     it "should put git gems in bundler path" do
-      @task.instance_variable_get(:@git_cache).stub(:get_source) { |source, where| where }
-      @task.stub(:install_gem)
-      @task.stub(:build_gem) { |path| "#{File.basename(path)}.gem" }
-      @task.stub(:compile_gem) { |path| path }
+      stub(@task.instance_variable_get(:@git_cache)).get_source { |source, where| where }
+      stub(@task).install_gem
+      stub(@task).build_gem { |path| "#{File.basename(path)}.gem" }
+      stub(@task).compile_gem { |path| path }
       @task.install
       Pathname.new(File.join(@bundler_gems_dir, "common-e36886a189b8")).should be_directory
       Pathname.new(File.join(@bundler_gems_dir, "eventmachine-2806c630d863")).should be_directory
@@ -99,11 +99,11 @@ describe "GemfileTask" do
                           :git_scope => "git_scope"}}
       @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir, "1.9.2p180")
       @task_git_cache = @task.instance_variable_get(:@git_cache)
-      @task_git_cache.stub(:get_source) do |source, where|
+      stub(@task_git_cache).get_source do |source, where|
         File.join(@git_working_dir, "test_gem")
       end
-      @task_git_cache.stub(:get_compiled_gem) { |source, where| nil }
-      @task_git_cache.stub(:put_compiled_gem) { |source, where| nil }
+      stub(@task_git_cache).get_compiled_gem
+      stub(@task_git_cache).put_compiled_gem
     end
 
     it "should locate nested gemspecs" do
@@ -125,14 +125,14 @@ describe "GemfileTask" do
     end
 
     it "should check compiled gem cache" do
-      @task_git_cache.should_receive(:get_compiled_gem)
-      @task.install_git_gem(@spec)
+      mock(@task_git_cache).get_compiled_gem(anything) { raise "hell" }
+      expect { @task.install_git_gem(@spec) }.to raise_error "hell"
     end
 
     it "should put compiled gem in cache if it has extensions" do
       # hello gem has extensions
-      @task_git_cache.should_receive(:put_compiled_gem)
-      @task.install_git_gem(@spec)
+      mock(@task_git_cache).put_compiled_gem(anything, anything) { raise "hell" }
+      expect { @task.install_git_gem(@spec) }.to raise_error "hell"
     end
   end
 end

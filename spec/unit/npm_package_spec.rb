@@ -7,9 +7,9 @@ describe NpmPackage do
   include NodeSpecHelpers
 
   before :each do
-    @logger = double("Logger").as_null_object
-    @cache = double("Cache").as_null_object
-    @git_cache = double("GitCache").as_null_object
+    @logger = mock!
+    @cache = mock!
+    @git_cache = mock!
     @runtime_info = node_staging_env[:runtime_info]
     @runtime_info[:npm_version] = NpmHelper.get_npm_version(@runtime_info)
     @working_dir = Dir.mktmpdir
@@ -87,17 +87,17 @@ describe NpmPackage do
 
   it "outputs error message if package can't be found" do
     error_message = "Package is not found in npm registry cf-runtime@0.0.0"
-    @logger.should_receive(:error).with(/#{error_message}/)
+    mock(@logger).error(/#{error_message}/)
     package = NpmPackage.new("cf-runtime", {"version" => "0.0.0"},
                              @working_dir, nil, nil, @runtime_info, @logger, @cache, @git_cache)
     package.get_registry_data
   end
 
   it "outputs error message if connection timeout" do
-    Net::HTTP.should_receive(:get_response).and_raise(Timeout::Error)
+    mock(Net::HTTP).get_response(anything) { raise Timeout::Error }
 
     error_message = "Timeout error requesting npm registry"
-    @logger.should_receive(:error).with(/#{error_message}/)
+    mock(@logger).error(/#{error_message}/)
     package = NpmPackage.new("bcrypt", {"version" => "0.5.0"},
                              @working_dir, nil, nil, @runtime_info, @logger, @cache, @git_cache)
     package.get_registry_data
@@ -107,10 +107,10 @@ describe NpmPackage do
     pending_unless_npm_provided
     error_message = "Node version requirement >=0.8 is not compatible" +
         " with the current node version 0.6.8"
-    @logger.should_receive(:error).with(/#{error_message}/)
+    mock(@logger).error(/#{error_message}/)
     package = NpmPackage.new("test", {"version" => "0.5.0"},
                              @working_dir, nil, nil, @runtime_info, @logger, @cache, @git_cache)
-    package.stub(:package_config) do |path|
+    stub(package).package_config do |path|
       { "engines" => { "node" => ">=0.8" } }
     end
     package.engine_version_satisfied?(@working_dir)
@@ -123,11 +123,7 @@ describe NpmPackage do
     FileUtils.cp_r(node_module, @working_dir)
     package_path = File.join(@working_dir, "bcrypt")
 
-    error_message = "Failed building package: bcrypt@0.4.0"
-    @logger.should_receive(:error).with(/#{error_message}/)
-
-    error_message = "Error: ENOENT, no such file or directory .*package.json"
-    @logger.should_receive(:error).with(/#{error_message}/)
+    mock(@logger).error(anything).any_number_of_times
 
     package = NpmPackage.new("bcrypt", {"version" => "0.4.0"},
                              package_path, nil, nil, @runtime_info, @logger, @cache, @git_cache)
@@ -140,14 +136,13 @@ describe NpmPackage do
 
   it "fails install package if npm output has NPM ERR!" do
     pending_unless_npm_provided
-    error_message = "Failed building package: bcrypt@0.4.0"
-    @logger.should_receive(:error).with(/#{error_message}/)
-
+    stub(@logger).error(anything)
+    mock(@logger).error(/Failed building package: bcrypt@0.4.0/)
 
     package = NpmPackage.new("bcrypt", {"version" => "0.4.0"},
                              @working_dir, nil, nil, @runtime_info, @logger, @cache, @git_cache)
 
-    package.stub(:run_build) do |where|
+    stub(package).run_build do |where|
       [0, "npm ERR! some command not found"]
     end
 
@@ -156,14 +151,14 @@ describe NpmPackage do
 
   it "fails install package if npm output has gyp ERR!" do
     pending_unless_npm_provided
-    error_message = "Failed building package: bcrypt@0.4.0"
-    @logger.should_receive(:error).with(/#{error_message}/)
 
+    stub(@logger).error(anything)
+    mock(@logger).error(/Failed building package: bcrypt@0.4.0/)
 
     package = NpmPackage.new("bcrypt", {"version" => "0.4.0"},
                              @working_dir, nil, nil, @runtime_info, @logger, @cache, @git_cache)
 
-    package.stub(:run_build) do |where|
+    stub(package).run_build do |where|
       [0, "gyp ERR! some command not found"]
     end
 
