@@ -62,6 +62,41 @@ fi
 
   let(:staging_env) { buildpack_staging_env }
 
+  context "when a buildpack URL is passed" do
+    let(:buildpack_url) { "git://github.com/heroku/heroku-buildpack-java.git" }
+    let(:staging_env) { buildpack_staging_env.merge(:buildpack => buildpack_url) }
+    let(:plugin) { BuildpackPlugin.new(".", ".", staging_env) }
+
+    subject { plugin.build_pack }
+
+    it "clones the buildpack URL" do
+      mock(plugin).run_and_log(anything)  do |cmd|
+        expect(cmd).to match /git clone #{buildpack_url} #{plugin.app_dir}\/.buildpacks/
+        ["", true]
+      end
+
+      subject
+    end
+
+    it "does not try to detect the buildpack" do
+      stub(plugin).run_and_log(anything) { ["", true] }
+
+      plugin.installers.each do |i|
+        dont_allow(i).detect
+      end
+
+      subject
+    end
+
+    context "when the cloning fails" do
+      it "gives up and logs an error" do
+        stub(plugin).run_and_log(anything) { ["some failure output", false] }
+
+        expect {subject}.to raise_error("Failed to git clone buildpack:\nsome failure output")
+      end
+    end
+  end
+
   context "when a start command is passed" do
     let(:staging_env) { buildpack_staging_env.merge({:meta => {:command => "node app.js --from-manifest=true"}}) }
 
