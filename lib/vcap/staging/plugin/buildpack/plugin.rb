@@ -2,6 +2,7 @@ require 'bundler'
 
 require "vcap/staging/plugin/shell_helpers"
 require 'vcap/staging/plugin/rails3/database_support'
+require "uuidtools"
 require_relative("buildpack_installer")
 
 class BuildpackPlugin < StagingPlugin
@@ -15,6 +16,7 @@ class BuildpackPlugin < StagingPlugin
       Bundler.with_clean_env do
         build_pack.compile
       end
+      stage_rails_console if rails_buildpack?
       create_startup_script
     end
   end
@@ -75,9 +77,27 @@ class BuildpackPlugin < StagingPlugin
     ""
   end
 
+  # TODO - remove this when we have the ability to ssh to a locally-running console
+  def rails_buildpack?
+    @build_pack.name == "Ruby/Rails"
+  end
+
+  def stage_rails_console
+    #Copy cf-rails-console to app
+    cf_rails_console_dir = destination_directory + '/cf-rails-console'
+    FileUtils.mkdir_p(cf_rails_console_dir)
+    FileUtils.cp_r(File.expand_path('../resources/cf-rails-console', __FILE__), destination_directory)
+    #Generate console access file for caldecott access
+    config_file = cf_rails_console_dir + '/.consoleaccess'
+    data = {'username' => UUIDTools::UUID.random_create.to_s,'password' => UUIDTools::UUID.random_create.to_s}
+    File.open(config_file, 'w') do |fh|
+      fh.write(YAML.dump(data))
+    end
+  end
+
   def startup_script
     generate_startup_script(environment_variables) do
-      <<-BASH
+      script_content = <<-BASH
 unset GEM_PATH
 if [ -d .profile.d ]; then
   for i in .profile.d/*.sh; do
@@ -89,6 +109,18 @@ if [ -d .profile.d ]; then
 fi
 env > logs/env.log
 BASH
+
+      if rails_buildpack?
+        script_content += <<-BASH
+if [ -n "$VCAP_CONSOLE_PORT" ]; then
+  bundle exec ruby cf-rails-console/rails_console.rb >> logs/console.log 2>> logs/console.log &
+  CONSOLE_STARTED=$!
+  echo "$CONSOLE_STARTED" >> console.pid
+fi
+        BASH
+      end
+
+      script_content
     end
   end
 

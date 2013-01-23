@@ -5,6 +5,7 @@ require 'rr'
 describe "Buildpack Plugin" do
   let(:fake_buildpacks_dir) { File.expand_path("../../fixtures/fake_buildpacks", __FILE__) }
   let(:buildpacks_path_with_start_cmd) { "#{fake_buildpacks_dir}/with_start_cmd" }
+  let(:buildpacks_path_with_rails) { "#{fake_buildpacks_dir}/with_rails" }
   let(:buildpacks_path_without_start_cmd) { "#{fake_buildpacks_dir}/without_start_cmd" }
   let(:buildpacks_path_with_no_match) { "#{fake_buildpacks_dir}/with_no_match" }
 
@@ -164,11 +165,47 @@ fi
     end
   end
 
-  def packages_with_start_script(staged_dir, start_command)
+  context "when a rails application is detected by the ruby buildpack" do
+    before { app_fixture app_without_procfile }
+    let(:buildpacks_path) { buildpacks_path_with_rails }
+
+    it "adds rails console to the startup script" do
+      stage staging_env do |staged_dir|
+        packages_with_start_script(staged_dir, "bundle exec rails server --from-buildpack=true")
+        expect(start_script_body(staged_dir)).to include("bundle exec ruby cf-rails-console/rails_console.rb")
+      end
+    end
+
+    it "puts the necessary files in the app" do
+      stage staging_env do |staged_dir|
+        packages_with_start_script(staged_dir, "bundle exec rails server --from-buildpack=true")
+        expect(File.exists?(File.join(staged_dir, "cf-rails-console/rails_console.rb"))).to be_true
+        config_file_contents = YAML.load_file(File.join(staged_dir, "cf-rails-console/.consoleaccess"))
+        expect(config_file_contents.keys).to match_array(["username", "password"])
+      end
+    end
+  end
+
+  context "when a rails application is NOT detected" do
+    before { app_fixture app_without_procfile }
+    let(:buildpacks_path) { buildpacks_path_with_start_cmd }
+
+    it "doesn't add rails console to the startup script" do
+      stage staging_env do |staged_dir|
+        expect(start_script_body(staged_dir)).not_to include("bundle exec ruby cf-rails-console/rails_console.rb")
+        expect(File.exists?(File.join(staged_dir, "cf-rails-console/rails_console.rb"))).to be_false
+      end
+    end
+  end
+
+  def start_script_body(staged_dir)
     start_script = File.join(staged_dir, 'startup')
     start_script.should be_executable_file
-    script_body = File.read(start_script)
-    script_body.should include("#{start_command} > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &")
+    File.read(start_script)
+  end
+
+  def packages_with_start_script(staged_dir, start_command)
+    start_script_body(staged_dir).should include("#{start_command} > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &")
   end
 
   def buildpack_staging_env(services=[])
