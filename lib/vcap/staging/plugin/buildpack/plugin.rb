@@ -97,7 +97,7 @@ BASH
   end
 
   def environment_variables
-    vars = release_info['config_vars']
+    vars = release_info['config_vars'] || {}
     vars.each { |k, v| vars[k] = "${#{k}:-#{v}}" }
     vars["PORT"] = "$VCAP_APP_PORT"
     vars["DATABASE_URL"] = database_uri if bound_database
