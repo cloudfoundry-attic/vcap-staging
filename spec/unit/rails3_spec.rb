@@ -422,21 +422,39 @@ describe "Rails3Plugin" do
   before :each do
     @working_dir = Dir.mktmpdir
     @plugin = StagingPlugin.load_plugin_for(rails_staging_env[:framework_info][:name])
+    @stager = @plugin.new(@working_dir, @working_dir, rails_staging_env)
+    @expected_assets_config = <<-BODY
+Rails.application.config.serve_static_assets = true
+Rails.application.config.assets.compile = true
+    BODY
   end
 
   after :each do
     FileUtils.rm_rf(@working_dir) if @working_dir
   end
 
-  it "adds live compilation in assets plugin" do
-    expected_assets_config = <<BODY
-Rails.application.config.serve_static_assets = true
-Rails.application.config.assets.compile = true
-BODY
-    stager = @plugin.new(@working_dir, @working_dir, rails_staging_env)
-    stager.create_asset_plugin({:live_compilation => true})
-    config = File.read(File.join(@working_dir, "app", "vendor", "plugins", "configure_assets", "init.rb"))
-    config.should == expected_assets_config
+  context "rails_version returns '3.1'" do
+    before do
+      stub(@stager).rails_version { "3.1" }
+    end
+
+    it "adds live compilation in assets plugin" do
+      @stager.create_asset_plugin({:live_compilation => true})
+      config = File.read(File.join(@working_dir, "app", "vendor", "plugins", "configure_assets", "init.rb"))
+      config.should == @expected_assets_config
+    end
+  end
+
+  context "rails_version returns '3.2'" do
+    before do
+      stub(@stager).rails_version { "3.2" }
+    end
+
+    it "adds live compilation in assets plugin" do
+      @stager.create_asset_plugin({:live_compilation => true})
+      config = File.read(File.join(@working_dir, "app", "config", "initializers", "cf_configure_assets.rb"))
+      config.should == @expected_assets_config
+    end
   end
 end
 

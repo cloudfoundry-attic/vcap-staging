@@ -177,9 +177,14 @@ fi
       config["Rails.application.config.assets.compile"] = "true"
     end
     init_code = config.map { |k,v| "#{k} = #{v}" }.join("\n")
-    plugin_dir = File.join(app_dir, "vendor", "plugins", "configure_assets")
+    if Gem::Version.new(rails_version) >= Gem::Version.new("3.2")
+      plugin_dir = File.join(app_dir, "config", "initializers")
+      init_script = File.join(plugin_dir, "cf_configure_assets.rb")
+    else
+      plugin_dir = File.join(app_dir, "vendor", "plugins", "configure_assets")
+      init_script = File.join(plugin_dir, "init.rb")
+    end
     FileUtils.mkdir_p(plugin_dir)
-    init_script = File.join(plugin_dir, "init.rb")
     File.open(init_script, "wb") { |fh| fh.puts(init_code) }
     FileUtils.chmod(0600, init_script)
   end
