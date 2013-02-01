@@ -4,6 +4,7 @@ require 'yaml'
 require 'yajl'
 require 'erb'
 require 'rbconfig'
+require 'vcap/logging'
 
 require 'tmpdir' # TODO - Replace this with something less absurd.
 # WARNING WARNING WARNING - Only create temp directories when running as a separate process.
@@ -128,9 +129,12 @@ class StagingPlugin
     begin
       log_file = File.expand_path(File.join(log_dir, "staging.log"))
       FileUtils.mkdir_p(File.dirname(log_file))
-      logger = Logger.new(log_file)
-      logger.level = ENV["DEBUG"] ? Logger::DEBUG : Logger::INFO
-      logger.formatter = lambda { |sev, time, pname, msg| "#{msg}\n" }
+      sink_map = VCAP::Logging::SinkMap.new(VCAP::Logging::LOG_LEVELS)
+      formatter = VCAP::Logging::Formatter::DelimitedFormatter.new { timestamp; log_level; data }
+      sink_map.add_sink(nil, nil, VCAP::Logging::Sink::StdioSink.new(STDOUT, formatter))
+      sink_map.add_sink(nil, nil, VCAP::Logging::Sink::FileSink.new(log_file, formatter))
+      logger = VCAP::Logging::Logger.new('public_logger', sink_map)
+      logger.log_level = ENV["DEBUG"] ? :debug : :info
       logger
     end
   end
