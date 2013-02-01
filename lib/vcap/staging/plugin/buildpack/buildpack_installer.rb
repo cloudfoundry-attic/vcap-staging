@@ -1,13 +1,9 @@
 require "open3"
-require "vcap/staging/plugin/shell_helpers"
 
 class BuildpackInstaller < Struct.new(:path, :app_dir, :logger)
-  include ShellHelpers
 
   def detect
-    logger.info "Checking #{path.basename} ..."
     @detect_output, status = Open3.capture2 command('detect')
-    logger.info "Skipping #{path.basename}." unless status == 0
     status == 0
   end
 
@@ -17,8 +13,8 @@ class BuildpackInstaller < Struct.new(:path, :app_dir, :logger)
 
   def compile
     logger.info "Installing #{path.basename}."
-    output, ok = run_and_log "#{command('compile')} /tmp/bundler_cache"
-    raise "Buildpack compilation step failed:\n#{output}" unless ok
+    ok = system "#{command('compile')} /tmp/bundler_cache"
+    raise "Buildpack compilation step failed:\n" unless ok
   end
 
   def release_info

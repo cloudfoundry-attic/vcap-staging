@@ -26,14 +26,6 @@ describe "Buildpack Plugin" do
       end
     end
 
-    it "captures output to the staging log" do
-      stage staging_env do |staged_dir|
-        staging_log = File.join(staged_dir, 'logs', 'staging.log')
-        staging_log_body = File.read(staging_log)
-        staging_log_body.should include("-----> Some compilation output")
-      end
-    end
-
     it "puts the environment variables provided by 'release' into the startup script" do
       stage staging_env do |staged_dir|
         start_script = File.join(staged_dir, 'startup')
@@ -71,16 +63,16 @@ fi
     subject { plugin.build_pack }
 
     it "clones the buildpack URL" do
-      mock(plugin).run_and_log(anything)  do |cmd|
+      mock(plugin).system(anything)  do |cmd|
         expect(cmd).to match /git clone #{buildpack_url} #{plugin.app_dir}\/.buildpacks/
-        ["", true]
+        true
       end
 
       subject
     end
 
     it "does not try to detect the buildpack" do
-      stub(plugin).run_and_log(anything) { ["", true] }
+      stub(plugin).system(anything) { true }
 
       plugin.installers.each do |i|
         dont_allow(i).detect
@@ -91,9 +83,9 @@ fi
 
     context "when the cloning fails" do
       it "gives up and logs an error" do
-        stub(plugin).run_and_log(anything) { ["some failure output", false] }
+        stub(plugin).system(anything) { false }
 
-        expect {subject}.to raise_error("Failed to git clone buildpack:\nsome failure output")
+        expect {subject}.to raise_error("Failed to git clone buildpack")
       end
     end
   end

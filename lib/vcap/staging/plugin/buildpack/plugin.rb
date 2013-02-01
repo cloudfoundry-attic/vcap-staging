@@ -1,13 +1,11 @@
 require 'bundler'
 
-require "vcap/staging/plugin/shell_helpers"
 require 'vcap/staging/plugin/rails3/database_support'
 require "uuidtools"
 require_relative("buildpack_installer")
 
 class BuildpackPlugin < StagingPlugin
   include RailsDatabaseSupport
-  include ShellHelpers
 
   def stage_application
     Dir.chdir(destination_directory) do
@@ -19,15 +17,12 @@ class BuildpackPlugin < StagingPlugin
       stage_rails_console if rails_buildpack?
       create_startup_script
     end
-  rescue => e
-      logger.error(e)
-      raise
   end
 
   def clone_buildpack(buildpack_url)
     buildpack_path = "#{app_dir}/.buildpacks/#{File.basename(buildpack_url)}"
-    output, ok = run_and_log("git clone #{buildpack_url} #{buildpack_path}")
-    raise "Failed to git clone buildpack:\n#{output}" unless ok
+    ok = system("git clone #{buildpack_url} #{buildpack_path}")
+    raise "Failed to git clone buildpack" unless ok
     BuildpackInstaller.new(Pathname.new(buildpack_path), app_dir, logger)
   end
 
