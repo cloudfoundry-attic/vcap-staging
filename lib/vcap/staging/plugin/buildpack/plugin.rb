@@ -19,6 +19,9 @@ class BuildpackPlugin < StagingPlugin
       stage_rails_console if rails_buildpack?
       create_startup_script
     end
+  rescue => e
+      logger.error(e)
+      raise
   end
 
   def clone_buildpack(buildpack_url)
