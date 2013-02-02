@@ -25,7 +25,7 @@ PATH
       nokogiri (>= 1.4.4)
       rake
       uuidtools (~> 2.1.2)
-      vcap_logging
+      vcap_logging (>= 0.1.4)
       yajl-ruby (>= 0.7.9)
 
 GEM
