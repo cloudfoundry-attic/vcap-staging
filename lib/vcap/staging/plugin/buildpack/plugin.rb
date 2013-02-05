@@ -62,17 +62,9 @@ class BuildpackPlugin < StagingPlugin
   end
 
   def procfile_contents
-    procfile_path = 'Procfile'
+    procfile_path = "#{app_dir}/Procfile"
 
     File.read(procfile_path) if File.exists?(procfile_path)
-  end
-
-  def app_dir
-    destination_directory
-  end
-
-  def change_directory_for_start
-    ""
   end
 
   # TODO - remove this when we have the ability to ssh to a locally-running console
@@ -97,8 +89,8 @@ class BuildpackPlugin < StagingPlugin
     generate_startup_script(environment_variables) do
       script_content = <<-BASH
 unset GEM_PATH
-if [ -d .profile.d ]; then
-  for i in .profile.d/*.sh; do
+if [ -d app/.profile.d ]; then
+  for i in app/.profile.d/*.sh; do
     if [ -r $i ]; then
       . $i
     fi
@@ -129,6 +121,7 @@ fi
   def environment_variables
     vars = release_info['config_vars'] || {}
     vars.each { |k, v| vars[k] = "${#{k}:-#{v}}" }
+    vars["HOME"] = "$PWD/app"
     vars["PORT"] = "$VCAP_APP_PORT"
     vars["DATABASE_URL"] = database_uri if bound_database
     vars["MEMORY_LIMIT"] = "#{application_memory}m"

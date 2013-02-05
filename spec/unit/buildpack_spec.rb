@@ -22,7 +22,7 @@ describe "Buildpack Plugin" do
   shared_examples_for "successful buildpack compilation" do
     it "copies the app directory to the correct destination" do
       stage staging_env do |staged_dir|
-        File.should be_file("#{staged_dir}/app.js")
+        File.should be_file("#{staged_dir}/app/app.js")
       end
     end
 
@@ -40,8 +40,8 @@ describe "Buildpack Plugin" do
         start_script.should be_executable_file
         script_body = File.read(start_script)
         script_body.should include(<<-EXPECTED)
-if [ -d .profile.d ]; then
-  for i in .profile.d/*.sh; do
+if [ -d app/.profile.d ]; then
+  for i in app/.profile.d/*.sh; do
     if [ -r $i ]; then
       . $i
     fi

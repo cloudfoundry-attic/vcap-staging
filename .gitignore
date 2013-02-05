@@ -1,4 +1,5 @@
 .rvmrc
 .idea
+logs
 /*.gem
 pkg
