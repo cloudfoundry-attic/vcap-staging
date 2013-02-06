@@ -40,7 +40,7 @@ module RailsDatabaseSupport
   def database_type
     case bound_database[:label]
       when /^mysql/
-        :mysql
+        :mysql2
       when /^postgres/
         :postgres
       else
