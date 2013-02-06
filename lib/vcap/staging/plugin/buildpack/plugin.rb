@@ -123,7 +123,13 @@ fi
     vars.each { |k, v| vars[k] = "${#{k}:-#{v}}" }
     vars["HOME"] = "$PWD/app"
     vars["PORT"] = "$VCAP_APP_PORT"
-    vars["DATABASE_URL"] = database_uri if bound_database
+    if bound_database
+      vars["DATABASE_URL"] = database_uri
+    else
+      msg = "No database services are bound to this app!"
+      msg << " Rails apps must have either a mysql or postgres service bound."
+      raise msg
+    end
     vars["MEMORY_LIMIT"] = "#{application_memory}m"
     vars
   end
