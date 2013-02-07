@@ -201,15 +201,29 @@ fi
     let(:buildpacks_path) { buildpacks_path_with_start_cmd }
     let(:staging_env) {
       buildpack_staging_env([
-        {:label => "postgresql-9.0", :name => "mydb-production",
-                          :credentials => {
-                            :hostname => "myhost",
-                            :user => "testuser",
-                            :port => 345,
-                            :password => "test",
-                            :name => "mydb"}
-        }]
-      )
+        {
+          :label => "postgresql-9.0",
+          :name => "foo12",
+          :credentials => {
+            :hostname => "myhost",
+            :user => "testuser",
+            :port => 345,
+            :password => "test",
+            :name => "mydb"
+          }
+        },
+        {
+          :label => "postgresql-9.0",
+          :name => "foo34",
+          :credentials => {
+            :hostname => "myhost-2",
+            :user => "testuser",
+            :port => 345,
+            :password => "test",
+            :name => "mydb"
+          }
+        }
+      ])
     }
 
     it "doesn't add rails console to the startup script" do

@@ -123,7 +123,7 @@ fi
     vars.each { |k, v| vars[k] = "${#{k}:-#{v}}" }
     vars["HOME"] = "$PWD/app"
     vars["PORT"] = "$VCAP_APP_PORT"
-    vars["DATABASE_URL"] = database_uri if bound_database && rails_buildpack?
+    vars["DATABASE_URL"] = database_uri if rails_buildpack? && bound_database
     vars["MEMORY_LIMIT"] = "#{application_memory}m"
     vars
   end
