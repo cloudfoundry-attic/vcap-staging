@@ -14,7 +14,7 @@ gemspec = Gem::Specification.new do |s|
   s.add_dependency('nokogiri', '>= 1.4.4')
   s.add_dependency('rake')
   s.add_dependency('yajl-ruby', '>= 0.7.9')
-  s.add_dependency('vcap_logging', '>= 0.1.4')
+  s.add_dependency('vcap_logging', '= 0.1.4')
 
   s.add_development_dependency('rspec')
   s.add_development_dependency('pry')
