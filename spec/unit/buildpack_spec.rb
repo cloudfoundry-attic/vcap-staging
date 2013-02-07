@@ -63,7 +63,7 @@ fi
     subject { plugin.build_pack }
 
     it "clones the buildpack URL" do
-      mock(plugin).system(anything)  do |cmd|
+      mock(plugin).system(anything) do |cmd|
         expect(cmd).to match /git clone #{buildpack_url} #{plugin.app_dir}\/.buildpacks/
         true
       end
@@ -85,7 +85,7 @@ fi
       it "gives up and logs an error" do
         stub(plugin).system(anything) { false }
 
-        expect {subject}.to raise_error("Failed to git clone buildpack")
+        expect { subject }.to raise_error("Failed to git clone buildpack")
       end
     end
   end
@@ -160,6 +160,18 @@ fi
   context "when a rails application is detected by the ruby buildpack" do
     before { app_fixture app_without_procfile }
     let(:buildpacks_path) { buildpacks_path_with_rails }
+    let(:staging_env) {
+      buildpack_staging_env([
+                              {:label => "postgresql-9.0", :name => "mydb-production",
+                               :credentials => {
+                                 :hostname => "myhost",
+                                 :user => "testuser",
+                                 :port => 345,
+                                 :password => "test",
+                                 :name => "mydb"}
+                              }]
+      )
+    }
 
     it "adds rails console to the startup script" do
       stage staging_env do |staged_dir|
@@ -176,16 +188,40 @@ fi
         expect(config_file_contents.keys).to match_array(["username", "password"])
       end
     end
+
+    it "sets DATABASE_URL in the start script" do
+      stage staging_env do |staged_dir|
+        start_script_body(staged_dir).should include "DATABASE_URL"
+      end
+    end
   end
 
   context "when a rails application is NOT detected" do
     before { app_fixture app_without_procfile }
     let(:buildpacks_path) { buildpacks_path_with_start_cmd }
+    let(:staging_env) {
+      buildpack_staging_env([
+        {:label => "postgresql-9.0", :name => "mydb-production",
+                          :credentials => {
+                            :hostname => "myhost",
+                            :user => "testuser",
+                            :port => 345,
+                            :password => "test",
+                            :name => "mydb"}
+        }]
+      )
+    }
 
     it "doesn't add rails console to the startup script" do
       stage staging_env do |staged_dir|
         expect(start_script_body(staged_dir)).not_to include("bundle exec ruby cf-rails-console/rails_console.rb")
         expect(File.exists?(File.join(staged_dir, "cf-rails-console/rails_console.rb"))).to be_false
+      end
+    end
+
+    it "doesn't add DATABASE_URL in the start script" do
+      stage staging_env do |staged_dir|
+        start_script_body(staged_dir).should_not include "DATABASE_URL"
       end
     end
   end
@@ -202,17 +238,17 @@ fi
 
   def buildpack_staging_env(services=[])
     {:runtime_info => {
-        :name => "ruby18",
-        :version => "1.8.7",
-        :description => "Ruby 1.8.7",
-        :executable => "/usr/bin/ruby",
-        :environment => {"bundle_gemfile"=>nil}
+      :name => "ruby18",
+      :version => "1.8.7",
+      :description => "Ruby 1.8.7",
+      :executable => "/usr/bin/ruby",
+      :environment => {"bundle_gemfile" => nil}
     },
      :framework_info => {
-         :name => "buildpack",
-         :runtimes => [{"ruby18"=>{"default"=>true}}, {"ruby19"=>{"default"=>false}}]
+       :name => "buildpack",
+       :runtimes => [{"ruby18" => {"default" => true}}, {"ruby19" => {"default" => false}}]
      },
-    :services => services
+     :services => services
     }
   end
 end
