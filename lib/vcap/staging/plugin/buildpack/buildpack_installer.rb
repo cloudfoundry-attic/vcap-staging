@@ -1,6 +1,6 @@
 require "open3"
 
-class BuildpackInstaller < Struct.new(:path, :app_dir, :logger)
+class BuildpackInstaller < Struct.new(:path, :app_dir)
 
   def detect
     @detect_output, status = Open3.capture2 command('detect')
@@ -12,7 +12,7 @@ class BuildpackInstaller < Struct.new(:path, :app_dir, :logger)
   end
 
   def compile
-    logger.info "Installing #{path.basename}."
+    puts "Installing #{path.basename}."
     ok = system "#{command('compile')} /tmp/bundler_cache"
     raise "Buildpack compilation step failed:\n" unless ok
   end

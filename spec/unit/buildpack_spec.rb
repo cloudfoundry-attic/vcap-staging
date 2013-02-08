@@ -82,7 +82,7 @@ fi
     end
 
     context "when the cloning fails" do
-      it "gives up and logs an error" do
+      it "gives up and raises an error" do
         stub(plugin).system(anything) { false }
 
         expect { subject }.to raise_error("Failed to git clone buildpack")

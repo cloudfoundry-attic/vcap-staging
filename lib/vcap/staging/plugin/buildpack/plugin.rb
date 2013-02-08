@@ -23,7 +23,7 @@ class BuildpackPlugin < StagingPlugin
     buildpack_path = "#{app_dir}/.buildpacks/#{File.basename(buildpack_url)}"
     ok = system("git clone #{buildpack_url} #{buildpack_path}")
     raise "Failed to git clone buildpack" unless ok
-    BuildpackInstaller.new(Pathname.new(buildpack_path), app_dir, logger)
+    BuildpackInstaller.new(Pathname.new(buildpack_path), app_dir)
   end
 
   def build_pack
@@ -44,7 +44,7 @@ class BuildpackPlugin < StagingPlugin
 
   def installers
     buildpacks_path.children.map do |buildpack|
-      BuildpackInstaller.new(buildpack, app_dir, logger)
+      BuildpackInstaller.new(buildpack, app_dir)
     end
   end
 
