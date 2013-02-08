@@ -298,6 +298,28 @@ wait $STARTED
       lambda {stage(rails_staging_env([{:label=>"postgresql-9.0",
         :name=> "myservice"}]))}.should raise_error RuntimeError
     end
+
+    it 'raises an exception when the database adapter mapping is unknown' do
+      mock.instance_of(Rails3Plugin).database_type {:unknown_db}
+
+      expect {
+        stage(rails_staging_env([
+          {:label => "mysql-5.5", :name => "myservice", :credentials => {
+            :hostname => "thehost", :user => "auser", :port => 34567, :password => "testa", :name => "mydb23"}}
+        ]))
+      }.to raise_error(KeyError)
+    end
+
+    it 'sets the right adapter for mysql' do
+      stage(rails_staging_env([{:label => "mysql-5.5",
+        :credentials => {:hostname => "myhost", :user => "testuser", :port => 345, :password => "test",
+          :name => "mydb"}}])) do |staged_dir|
+        env = staged_dir.join('app', 'config', 'database.yml')
+        db_settings = YAML.load_file(env)
+        expect(db_settings['production']['adapter']).to eq 'mysql2'
+      end
+    end
+
   end
 
   describe "which has no database.yml" do
