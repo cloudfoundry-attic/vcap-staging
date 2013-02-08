@@ -50,12 +50,13 @@ module RailsDatabaseSupport
 
   DATABASE_TO_ADAPTER_MAPPING = {
       :mysql => 'mysql2',
+      :mysql2 => 'mysql2',
       :postgres => 'postgresql'
   }
 
 
   def database_config
-      { 'adapter' =>  DATABASE_TO_ADAPTER_MAPPING[database_type], 'encoding' => 'utf8', 'pool' => 5,
+      { 'adapter' =>  DATABASE_TO_ADAPTER_MAPPING.fetch(database_type), 'encoding' => 'utf8', 'pool' => 5,
         'reconnect' => false }.merge(credentials)
   end
 
