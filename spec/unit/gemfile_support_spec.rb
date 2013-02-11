@@ -187,17 +187,6 @@ describe 'An app being staged with inconsistent Gemfile and Gemfile.lock' do
   end
 end
 
-# TODO revisit this when we upgrade to Bundler 1.2.0, which adds the "ruby" method
-describe 'An app being staged with Ruby version specified in Gemfile' do
-  before do
-    app_fixture :sinatra_ruby_version_in_gemfile
-  end
-
-  it 'causes an error' do
-    lambda {stage(sinatra_staging_env)}.should raise_error(RuntimeError, /undefined method `ruby'/)
-  end
-end
-
 describe 'An app being staged containing a gem designated for a specific Ruby platform' do
   before do
     app_fixture :sinatra_platforms_gemfile

@@ -18,8 +18,8 @@ module GemfileSupport
     return unless uses_bundler?
     return if packaged_with_bundler_in_deployment_mode?
 
-    gem_task.install
     gem_task.install_bundler
+    gem_task.install
     gem_task.remove_gems_cached_in_app
 
     write_bundle_config
@@ -42,7 +42,7 @@ module GemfileSupport
     return @task if @task
     base_dir = StagingPlugin.platform_config["cache"]
     @task = GemfileTask.new(app_dir, library_version, ruby_cmd, base_dir,
-      runtime[:version], {:bundle_without=>bundle_without}, @staging_uid, @staging_gid)
+      runtime[:version], logger, {:bundle_without=>bundle_without}, @staging_uid, @staging_gid)
   end
 
   def library_version
