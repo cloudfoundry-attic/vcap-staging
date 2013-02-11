@@ -8,7 +8,7 @@ require File.expand_path('../gemspec_builder', __FILE__)
 class GemfileTask
   include SecureOperations
 
-  def initialize(app_dir, library_version, ruby_cmd, base_dir, ruby_version, options={}, uid=nil, gid=nil)
+  def initialize(app_dir, library_version, ruby_cmd, base_dir, ruby_version, logger, options={}, uid=nil, gid=nil)
     @app_dir          = File.expand_path(app_dir)
     @library_version  = library_version
     @cache_base_dir   = File.join(base_dir, ruby_version)
@@ -19,13 +19,7 @@ class GemfileTask
     @uid = uid
     @gid = gid
     @options = options
-
-    log_file = File.expand_path(File.join(@app_dir, "..", "logs", "staging.log"))
-    FileUtils.mkdir_p(File.dirname(log_file))
-
-    @logger = Logger.new(log_file)
-    @logger.level = ENV["DEBUG"] ? Logger::DEBUG : Logger::INFO
-    @logger.formatter = lambda { |sev, time, pname, msg| "#{msg}\n" }
+    @logger = logger
 
     @cache = GemCache.new(File.join(@cache_base_dir, "gem_cache"))
     git_repo_dir = File.join(base_dir, "git_cache")
