@@ -11,6 +11,7 @@ class BuildpackPlugin < StagingPlugin
     Dir.chdir(destination_directory) do
       create_app_directories
       copy_source_files
+      FileUtils.chmod_R(0744, app_dir)
       Bundler.with_clean_env do
         build_pack.compile
       end

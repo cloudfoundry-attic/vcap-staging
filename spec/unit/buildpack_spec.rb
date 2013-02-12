@@ -34,6 +34,17 @@ describe "Buildpack Plugin" do
       end
     end
 
+    it "ensures all files have executable permissions" do
+      stage staging_env do |staged_dir|
+        Dir.glob("#{staged_dir}/app/*").each do |file|
+          expect(File.stat(file).mode.to_s(8)[3..5]).to eq("744") unless File.directory? file
+        end
+        start_script = File.join(staged_dir, 'startup')
+        script_body = File.read(start_script)
+        expect(script_body).to include('export FROM_BUILD_PACK="${FROM_BUILD_PACK:-yes}"')
+      end
+    end
+
     it "stores everything in profile" do
       stage staging_env do |staged_dir|
         start_script = File.join(staged_dir, 'startup')
