@@ -183,8 +183,8 @@ fi
     it "puts the necessary files in the app" do
       stage staging_env do |staged_dir|
         packages_with_start_script(staged_dir, "bundle exec rails server --from-buildpack=true")
-        expect(File.exists?(File.join(staged_dir, "cf-rails-console/rails_console.rb"))).to be_true
-        config_file_contents = YAML.load_file(File.join(staged_dir, "cf-rails-console/.consoleaccess"))
+        expect(File.exists?(File.join(staged_dir, "app", "cf-rails-console/rails_console.rb"))).to be_true
+        config_file_contents = YAML.load_file(File.join(staged_dir, "app", "cf-rails-console/.consoleaccess"))
         expect(config_file_contents.keys).to match_array(["username", "password"])
       end
     end
