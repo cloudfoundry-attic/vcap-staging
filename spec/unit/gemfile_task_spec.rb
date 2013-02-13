@@ -17,11 +17,21 @@ describe "GemfileTask" do
     FileUtils.rm_rf(@git_working_dir)
   end
 
+  let(:logger) do
+    logger = mock("logger")
+    stub(logger).warn
+    stub(logger).info
+    stub(logger).error
+    stub(logger).debug
+    logger
+  end
+
   describe "Sinatra app with Gemfile.lock" do
     before :each do
       test_app = app_fixture_base_directory.join("sinatra_gemfile", "source")
       FileUtils.cp_r(File.join(test_app, "."), @app_dir)
-      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir, "1.9.2p180")
+      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir, "1.9.2p180", logger)
+      @task.install_bundler
     end
 
     it "should return specs in the order where dependent gems go first" do
@@ -37,7 +47,6 @@ describe "GemfileTask" do
         end
       end
     end
-
   end
 
   describe "Sinatra app with git dependencies" do
@@ -47,7 +56,8 @@ describe "GemfileTask" do
 
       @git_gems = %w(eventmachine vcap_logging)
 
-      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir, "1.9.2p180")
+      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir, "1.9.2p180", logger)
+      @task.install_bundler
     end
 
     it "should include git gems in specs" do
@@ -72,10 +82,10 @@ describe "GemfileTask" do
 
     it "should fail if revision is not specified" do
       spec = {:name => "vcap_logging", :version => "1.0.2",
-              :source => {:url => "git://github.com/cloudfoundry/common.git"}}
-      lambda {
+        :source => {:url => "git://github.com/cloudfoundry/common.git"}}
+      expect {
         @task.install_git_gem(spec)
-      }.should raise_error
+      }.to raise_error
     end
 
     it "should put git gems in bundler path" do
@@ -94,10 +104,11 @@ describe "GemfileTask" do
       test_gem = app_fixture_base_directory.join("sinatra_git", "test_gem")
       FileUtils.cp_r(test_gem, @git_working_dir)
       @spec = {:name => "hello", :version => "0.0.1",
-              :source => {:url => "url",
-                          :revision => "revision",
-                          :git_scope => "git_scope"}}
-      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir, "1.9.2p180")
+        :source => {:url => "url",
+          :revision => "revision",
+          :git_scope => "git_scope"}}
+      @task = GemfileTask.new(@app_dir, "1.9.1", @ruby_cmd, @working_dir, "1.9.2p180", logger)
+      @task.install_bundler
       @task_git_cache = @task.instance_variable_get(:@git_cache)
       stub(@task_git_cache).get_source do |source, where|
         File.join(@git_working_dir, "test_gem")
