@@ -17,7 +17,7 @@ describe "A PHP application being staged" do
 #!/bin/bash
 export TMPDIR="$PWD/tmp"
 env > env.log
-ruby resources/generate_apache_conf $VCAP_APP_PORT $HOME $VCAP_SERVICES 512m
+ruby resources/generate_apache_conf $VCAP_APP_PORT $HOME "$VCAP_SERVICES" 512m
 DROPLET_BASE_DIR=$PWD
 cd apache
 bash ./start.sh > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
@@ -37,7 +37,7 @@ wait $STARTED
 #!/bin/bash
 export TMPDIR="$PWD/tmp"
 env > env.log
-ruby resources/generate_apache_conf $VCAP_APP_PORT $HOME $VCAP_SERVICES 256m
+ruby resources/generate_apache_conf $VCAP_APP_PORT $HOME "$VCAP_SERVICES" 256m
 DROPLET_BASE_DIR=$PWD
 cd apache
 bash ./start.sh > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
