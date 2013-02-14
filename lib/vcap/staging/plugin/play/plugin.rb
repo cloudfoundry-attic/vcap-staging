@@ -31,7 +31,7 @@ class PlayPlugin < StagingPlugin
       dest ||= File.join(@destination_directory, 'app')
       # Play dists unpack to a dir named for app.  Assume that is the only entry
       app_dir = File.join(@source_directory,Dir.glob("*").first)
-      system "cp -a #{File.join(app_dir, "*")} #{dest}"
+      system "cp -a #{File.join(app_dir, ".")} #{dest}"
     end
   end
 
