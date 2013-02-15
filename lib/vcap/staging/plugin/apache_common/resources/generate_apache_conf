@@ -18,7 +18,7 @@ template = <<-ERB
   DocumentRoot <%= base_dir %>/app
   ErrorLog ${APACHE_LOG_DIR}/error.log
   CustomLog ${APACHE_LOG_DIR}/access.log combined
-  SetEnv VCAP_SERVICES <%= vcap_services %>
+  SetEnv VCAP_SERVICES '<%= vcap_services %>'
 </VirtualHost>
 ERB
 
