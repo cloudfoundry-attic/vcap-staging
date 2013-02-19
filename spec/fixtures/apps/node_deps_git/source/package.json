@@ -1,7 +1,0 @@
-{
-  "name" : "node-git",
-  "version" : "0.1.0",
-  "dependencies" : {
-    "graceful-fs" : "*"
-  }
-}

@@ -1,1 +1,0 @@
-This is a gem with a broken native extension.  It should cause a failure on gem install.

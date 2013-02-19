@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'tempfile'
 
 describe StagingPlugin::Config do
   describe '#from_file' do

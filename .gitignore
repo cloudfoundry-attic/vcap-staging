@@ -2,3 +2,4 @@
 .idea
 /*.gem
 pkg
+spec/reports

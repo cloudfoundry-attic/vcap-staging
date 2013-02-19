@@ -1,11 +1,6 @@
 require 'tmpdir'
 
 module StagingSpecHelpers
-  AUTOSTAGING_JAR = 'auto-reconfiguration-0.6.5.jar'
-  MYSQL_DRIVER_JAR = 'mysql-connector-java-5.1.12-bin.jar'
-  POSTGRESQL_DRIVER_JAR = 'postgresql-9.0-801.jdbc4.jar'
-  INSIGHT_AGENT = 'cf-tomcat-agent-javaagent-1.7.1.RELEASE'
-  AUTO_CONFIG_GEM_VERSION = '0.0.4'
 
   # Importantly, this returns a Pathname instance not a String.
   # This allows you to write: app_fixture_base_directory.join('subdir', 'subsubdir')
@@ -47,24 +42,8 @@ module StagingSpecHelpers
     plugin_klass = StagingPlugin.load_plugin_for(env[:framework_info][:name])
     working_dir = Dir.mktmpdir("#{@app_fixture}-staged")
     source_tempdir = nil
-    # TODO - There really needs to be a single helper to track tempdirs.
-    source_dir = case env[:framework_info][:name]
-                 when /spring|grails|lift|java_web/
-                   source_tempdir = Dir.mktmpdir(@app_fixture)
-                   app_source(source_tempdir)
-                 else
-                   app_source
-                 end
+    source_dir = app_source
     env[:environment] ||= []
-    runtime_name = env[:runtime_info][:name].upcase
-    if ENV["VCAP_RUNTIME_#{runtime_name}"]
-      env[:runtime_info][:executable] = ENV["VCAP_RUNTIME_#{runtime_name}"]
-      # When we aren't doing anything patchlevel specific, the runtime
-      # version can be overridden here
-      if ENV["VCAP_RUNTIME_#{runtime_name}_VER"]
-        env[:runtime_info][:version] = ENV["VCAP_RUNTIME_#{runtime_name}_VER"]
-      end
-    end
     stager = plugin_klass.new(source_dir, working_dir, env)
     stager.stage_application
     return working_dir unless block_given?

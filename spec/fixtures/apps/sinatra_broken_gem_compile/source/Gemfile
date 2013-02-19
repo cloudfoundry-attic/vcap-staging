@@ -1,4 +1,0 @@
-source "http://rubygems.org"
-
-gem "broken-compile", :path => "./broken-compile"
-gem "sinatra"

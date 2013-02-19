@@ -1,11 +1,11 @@
 require 'bundler'
 
-require 'vcap/staging/plugin/rails3/database_support'
 require "uuidtools"
 require_relative("buildpack_installer")
+require_relative("rails_support")
 
 class BuildpackPlugin < StagingPlugin
-  include RailsDatabaseSupport
+  include RailsSupport
 
   def stage_application
     Dir.chdir(destination_directory) do
@@ -73,19 +73,6 @@ class BuildpackPlugin < StagingPlugin
     @build_pack.name == "Ruby/Rails"
   end
 
-  def stage_rails_console
-    #Copy cf-rails-console to app
-    cf_rails_console_dir = app_dir + '/cf-rails-console'
-    FileUtils.mkdir_p(cf_rails_console_dir)
-    FileUtils.cp_r(File.expand_path('../resources/cf-rails-console', __FILE__), app_dir)
-    #Generate console access file for caldecott access
-    config_file = cf_rails_console_dir + '/.consoleaccess'
-    data = {'username' => UUIDTools::UUID.random_create.to_s,'password' => UUIDTools::UUID.random_create.to_s}
-    File.open(config_file, 'w') do |fh|
-      fh.write(YAML.dump(data))
-    end
-  end
-
   def startup_script
     generate_startup_script(environment_variables) do
       script_content = <<-BASH
@@ -100,19 +87,7 @@ if [ -d app/.profile.d ]; then
 fi
 env > logs/env.log
 BASH
-
-      if rails_buildpack?
-        script_content += <<-BASH
-if [ -n "$VCAP_CONSOLE_PORT" ]; then
-  cd app
-  bundle exec ruby cf-rails-console/rails_console.rb >> ../logs/console.log 2>> ../logs/console.log &
-  CONSOLE_STARTED=$!
-  echo "$CONSOLE_STARTED" >> ../console.pid
-  cd ..
-fi
-        BASH
-      end
-
+      script_content += console_start_script if rails_buildpack?
       script_content
     end
   end

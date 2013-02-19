@@ -1,9 +1,0 @@
-{
-  "name": "node-git",
-  "version": "0.1.0",
-  "dependencies": {
-    "graceful-fs": {
-      "version": "git://github.com/isaacs/node-graceful-fs.git#b8d93baa7f"
-    }
-  }
-}

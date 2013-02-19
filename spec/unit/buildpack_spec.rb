@@ -10,8 +10,8 @@ describe "Buildpack Plugin" do
   let(:buildpacks_path_with_no_match) { "#{fake_buildpacks_dir}/with_no_match" }
 
   let(:buildpacks_path) { buildpacks_path_with_start_cmd }
-  let(:app_with_procfile) { :node_deps_native }
-  let(:app_without_procfile) { :node_without_procfile }
+  let(:app_with_procfile) { :app_with_procfile }
+  let(:app_without_procfile) { :app_without_procfile }
 
   before do
     any_instance_of(BuildpackPlugin) do |plugin|
@@ -127,7 +127,7 @@ fi
     end
 
     it "raise a good error if the procfile is not a hash" do
-      app_fixture :node_invalid_procfile
+      app_fixture :invalid_procfile
       expect {
         stage staging_env
       }.to raise_error("Invalid Procfile format.  Please ensure it is a valid YAML hash")
