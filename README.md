@@ -1,1 +1,1 @@
-Cloud Foundry Staging
+Cloud Foundry Staging Plugins
