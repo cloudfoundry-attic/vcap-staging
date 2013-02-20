@@ -6,4 +6,9 @@ $:.unshift(File.expand_path("../../lib", __FILE__))
 require "vcap/staging/plugin/staging_plugin"
 require "vcap/staging/plugin/buildpack/plugin"
 
-BuildpackPlugin.stage_application
+unless ARGV.length == 1
+  puts "Usage: run_plugin [plugin config file]"
+  exit 1
+end
+
+BuildpackPlugin.from_file(ARGV[0]).stage_application
