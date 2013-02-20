@@ -153,10 +153,6 @@ class StagingPlugin
     @environment
   end
 
-  def staging_command
-    runtime[:staging]
-  end
-
   def start_command
     raise NotImplementedError, "subclasses must implement a 'start_command' method that returns a string"
   end
@@ -170,28 +166,12 @@ class StagingPlugin
     cmds.join("\n")
   end
 
-  def local_runtime
-    '%VCAP_LOCAL_RUNTIME%'
-  end
-
   def application_memory
     if environment[:resources] && environment[:resources][:memory]
       environment[:resources][:memory]
     else
       512 #MB
     end
-  end
-
-  # The specified :runtime
-  def runtime
-    environment[:runtime_info]
-  end
-
-  # Environment variables specified on the app supersede those
-  # set in the staging manifest for the runtime. Theoretically this
-  # would allow a user to run their Rails app in development mode, etc.
-  def environment_hash
-    @env_variables ||= build_environment_hash
   end
 
   def change_directory_for_start
@@ -286,7 +266,7 @@ echo "$STARTED" >> #{pidfile_dir}/run.pid
   end
 
   # Full path to the Ruby we are running under.
-  def current_ruby
+  def ruby
     File.join(Config::CONFIG['bindir'], Config::CONFIG['ruby_install_name'])
   end
 
@@ -298,35 +278,6 @@ echo "$STARTED" >> #{pidfile_dir}/run.pid
       env << "#{var}=#{ENV[var]} "
     end
     env.strip
-  end
-
-  # Constructs a hash containing the variables associated
-  # with the app's runtime.
-  def build_environment_hash
-    ret = {}
-    (runtime[:environment] || {}).each do |key,val|
-      ret[key.to_s.upcase] = val
-    end
-    ret
-  end
-
-  # If the runtime info specifies a workable ruby, returns that.
-  # Otherwise, returns the path to the ruby we were started with.
-  def ruby
-    @ruby ||= \
-    begin
-      rb = runtime[:executable]
-      pattern = Regexp.new(Regexp.quote(runtime[:version]))
-      output = get_ruby_version(rb)
-      if $? == 0 && output.strip =~ pattern
-        rb
-      elsif "#{RUBY_VERSION}p#{RUBY_PATCHLEVEL}" =~ pattern
-        current_ruby
-      else
-        puts "No suitable runtime found. Needs version matching #{runtime[:version]}"
-        exit 1
-      end
-    end
   end
 
   def get_ruby_version(exe)
