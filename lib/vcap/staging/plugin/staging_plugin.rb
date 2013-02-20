@@ -20,33 +20,9 @@ class StagingPlugin
 
   attr_accessor :source_directory, :destination_directory, :environment_json
 
-  def self.staging_root
-    File.expand_path('..', __FILE__)
-  end
-
   def self.platform_config
     config_path = ENV['PLATFORM_CONFIG']
     YAML.load_file(config_path)
-  end
-
-  # Transforms lowercased/underscored word into camelcase.
-  #
-  # EX: camelize('foo_bar') returns 'FooBar'
-  #
-  def self.camelize(word)
-    uc_parts = []
-    for part in word.split('_')
-      uc_part = part[0].upcase
-      uc_part += part[1, part.length - 1] if part.length > 1
-      uc_parts << uc_part
-    end
-    uc_parts.join
-  end
-
-  def self.load_plugin_for
-    plugin_path = File.join(staging_root, 'buildpack', 'plugin.rb')
-    require plugin_path
-    BuildpackPlugin
   end
 
   # Exits the process with a nonzero status if ARGV does not contain valid
@@ -157,15 +133,6 @@ class StagingPlugin
     raise NotImplementedError, "subclasses must implement a 'start_command' method that returns a string"
   end
 
-  def stop_command
-    cmds = []
-    cmds << 'APP_PID=$1'
-    cmds << 'APP_PPID=`ps -o ppid= -p $APP_PID`'
-    cmds << 'kill -9 $APP_PID'
-    cmds << 'kill -9 $APP_PPID'
-    cmds.join("\n")
-  end
-
   def application_memory
     if environment[:resources] && environment[:resources][:memory]
       environment[:resources][:memory]
@@ -208,15 +175,6 @@ echo "$STARTED" >> #{pidfile_dir}/run.pid
     ERB.new(template).result(binding).lines.reject {|l| l =~ /^\s*$/}.join
   end
 
-  def generate_stop_script(env_vars = {})
-    template = <<-SCRIPT
-#!/bin/bash
-<%= environment_statements_for(env_vars) %>
-<%= stop_command %>
-    SCRIPT
-    ERB.new(template).result(binding)
-  end
-
   # Generates newline-separated exports for the specified environment variables.
   # If the value of one of the keys is false or nil, it will be an 'unset' instead of an 'export'
   def environment_statements_for(vars)
@@ -240,14 +198,6 @@ echo "$STARTED" >> #{pidfile_dir}/run.pid
     FileUtils.mkdir_p(tmp_dir)
   end
 
-  def create_stop_script()
-    path = File.join(script_dir, 'stop')
-    File.open(path, 'wb') do |f|
-      f.puts stop_script
-    end
-    FileUtils.chmod(0500, path)
-  end
-
   def create_startup_script
     path = File.join(script_dir, 'startup')
     File.open(path, 'wb') do |f|
@@ -268,48 +218,5 @@ echo "$STARTED" >> #{pidfile_dir}/run.pid
   # Full path to the Ruby we are running under.
   def ruby
     File.join(Config::CONFIG['bindir'], Config::CONFIG['ruby_install_name'])
-  end
-
-  # Returns a set of environment clauses, only allowing the names specified.
-  def minimal_env(*allowed)
-    env = ''
-    allowed.each do |var|
-      next unless ENV.key?(var)
-      env << "#{var}=#{ENV[var]} "
-    end
-    env.strip
-  end
-
-  def get_ruby_version(exe)
-    get_ver  = %{-e "print RUBY_VERSION,'p',RUBY_PATCHLEVEL"}
-    `env -i PATH=#{ENV['PATH']} #{exe} #{get_ver}`
-  end
-
-  def insight_agent
-    StagingPlugin.platform_config['insight_agent']
-  end
-
-  def scan_files(base_dir, glob)
-    found = []
-    base_dir << '/' unless base_dir.end_with?('/')
-    Dir[glob].each do |full_path|
-      matched = block_given? ? yield(full_path) : true
-      if matched
-        relative_path = full_path.dup
-        relative_path[base_dir] = ''
-        found.push(relative_path)
-      end
-    end
-    found
-  end
-
-  def scan_files_for_regexp(base_dir, glob, pattern)
-    scan_files(base_dir, glob) do |path|
-      matched = false
-      File.open(path, 'rb') do |f|
-        matched = true if f.read.match(pattern)
-      end
-      matched
-    end
   end
 end
