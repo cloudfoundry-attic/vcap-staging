@@ -16,9 +16,8 @@ class StagingPlugin::Config < VCAP::Config
       },
 
       optional("environment") => {               # This is misnamed, but it is called this
-        "services"  => [Hash],                   # throughout the existing staging code. We use
-        "framework_info" => Hash,                # it to maintain consistency.
-        "runtime_info" => Hash,
+        "services"  => [Hash],                   # throughout the existing staging code.
+        "runtime_info" => Hash,                  # We use it to maintain consistency.
         "resources" => {
           "memory" => Integer,
           "disk"   => Integer,

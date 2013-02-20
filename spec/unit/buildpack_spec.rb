@@ -262,18 +262,6 @@ fi
   end
 
   def buildpack_staging_env(services=[])
-    {:runtime_info => {
-      :name => "ruby18",
-      :version => "1.8.7",
-      :description => "Ruby 1.8.7",
-      :executable => "/usr/bin/ruby",
-      :environment => {"bundle_gemfile" => nil}
-    },
-     :framework_info => {
-       :name => "buildpack",
-       :runtimes => [{"ruby18" => {"default" => true}}, {"ruby19" => {"default" => false}}]
-     },
-     :services => services
-    }
+    { :services => services }
   end
 end

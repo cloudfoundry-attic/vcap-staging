@@ -43,11 +43,10 @@ class StagingPlugin
     uc_parts.join
   end
 
-  def self.load_plugin_for(framework)
-    framework = framework.to_s
-    plugin_path = File.join(staging_root, framework, 'plugin.rb')
+  def self.load_plugin_for
+    plugin_path = File.join(staging_root, 'buildpack', 'plugin.rb')
     require plugin_path
-    Object.const_get("#{camelize(framework)}Plugin")
+    BuildpackPlugin
   end
 
   # Exits the process with a nonzero status if ARGV does not contain valid
@@ -99,8 +98,6 @@ class StagingPlugin
   #
   # NB: Environment is not what you think it is (better named app_properties?). It is a hash of:
   #   :services  => [service_binding_hash]  # See ServiceBinding#for_staging in cloud_controller/app/models/service_binding.rb
-  #   :framework => {framework properties from manifest}
-  #   :runtime   => {runtime properties}
   #   :resources => {                       # See App#resource_requirements or App#limits (they return identical hashes)
   #     :memory => mem limits in MB         # in cloud_controller/app/models/app.rb
   #     :disk   => disk limits in MB
@@ -146,10 +143,6 @@ class StagingPlugin
 
   def script_dir
     destination_directory
-  end
-
-  def framework
-    environment[:framework_info]
   end
 
   def stage_application
@@ -201,7 +194,6 @@ class StagingPlugin
     @env_variables ||= build_environment_hash
   end
 
-  # Overridden in subclasses when the framework needs to start from a different directory.
   def change_directory_for_start
     "cd app"
   end
@@ -289,29 +281,8 @@ echo "$STARTED" >> #{pidfile_dir}/run.pid
     system "cp -a #{File.join(source_directory, "*")} #{dest}"
   end
 
-  def detection_rules
-    environment[:framework_info][:detection]
-  end
-
   def bound_services
     environment[:services] || []
-  end
-
-  # Returns all the application files that match detection patterns.
-  # This excludes files that are checked for existence/non-existence.
-  # Returned pathnames are relative to the app directory:
-  # e.g. [sinatra_app.rb, lib/somefile.rb]
-  def app_files_matching_patterns
-    matching = []
-    detection_rules.each do |rule|
-      rule.each do |glob, pattern|
-        next unless String === pattern
-        full_glob = File.join(app_dir, glob)
-        files = scan_files_for_regexp(app_dir, full_glob, pattern)
-        matching.concat(files)
-      end
-    end
-    matching
   end
 
   # Full path to the Ruby we are running under.

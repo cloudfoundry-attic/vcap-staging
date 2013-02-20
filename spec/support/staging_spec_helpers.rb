@@ -39,7 +39,7 @@ module StagingSpecHelpers
   # automatically deletes it when the block returns.
   def stage(env = {})
     raise "Call 'app_fixture :name_of_app' before staging" unless @app_fixture
-    plugin_klass = StagingPlugin.load_plugin_for(env[:framework_info][:name])
+    plugin_klass = BuildpackPlugin
     working_dir = Dir.mktmpdir("#{@app_fixture}-staged")
     source_tempdir = nil
     source_dir = app_source
