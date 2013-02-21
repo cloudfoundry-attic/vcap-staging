@@ -165,7 +165,7 @@ class StagingPlugin
 <%= after_env_before_script %>
 DROPLET_BASE_DIR=$PWD
 <%= change_directory_for_start %>
-<%= start_command %> > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
+(<%= start_command %>) > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &
 <%= get_launched_process_pid %>
 echo "$STARTED" >> #{pidfile_dir}/run.pid
 <%= wait_for_launched_process %>

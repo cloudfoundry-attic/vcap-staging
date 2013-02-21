@@ -258,7 +258,7 @@ fi
   end
 
   def packages_with_start_script(staged_dir, start_command)
-    start_script_body(staged_dir).should include("#{start_command} > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &")
+    start_script_body(staged_dir).should include("(#{start_command}) > $DROPLET_BASE_DIR/logs/stdout.log 2> $DROPLET_BASE_DIR/logs/stderr.log &")
   end
 
   def buildpack_staging_env(services=[])
