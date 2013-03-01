@@ -75,7 +75,7 @@ fi
 
     it "clones the buildpack URL" do
       mock(plugin).system(anything) do |cmd|
-        expect(cmd).to match /git clone #{buildpack_url} #{plugin.app_dir}\/.buildpacks/
+        expect(cmd).to match /git clone #{buildpack_url} #{plugin.source_directory}\/.buildpacks/
         true
       end
 

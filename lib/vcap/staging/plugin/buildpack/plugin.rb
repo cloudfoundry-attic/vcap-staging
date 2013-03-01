@@ -21,7 +21,7 @@ class BuildpackPlugin < StagingPlugin
   end
 
   def clone_buildpack(buildpack_url)
-    buildpack_path = "#{app_dir}/.buildpacks/#{File.basename(buildpack_url)}"
+    buildpack_path = "#{source_directory}/.buildpacks/#{File.basename(buildpack_url)}"
     ok = system("git clone #{buildpack_url} #{buildpack_path}")
     raise "Failed to git clone buildpack" unless ok
     BuildpackInstaller.new(Pathname.new(buildpack_path), app_dir)
