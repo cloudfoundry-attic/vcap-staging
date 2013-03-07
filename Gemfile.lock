@@ -21,7 +21,7 @@ GIT
 PATH
   remote: .
   specs:
-    vcap_staging (0.1.68)
+    vcap_staging (0.1.69)
       nokogiri (>= 1.4.4)
       rake
       uuidtools (~> 2.1.2)
