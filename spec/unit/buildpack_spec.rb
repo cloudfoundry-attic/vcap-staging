@@ -62,6 +62,14 @@ fi
         EXPECTED
       end
     end
+
+    it "is packaged without missing dot files like .hidden" do
+      stage staging_env do |staged_dir|
+        app_dir = File.join(staged_dir, 'app')
+        app_files = Dir.entries(app_dir)
+        app_files.should include('.hidden')
+      end
+    end
   end
 
   let(:staging_env) { buildpack_staging_env }

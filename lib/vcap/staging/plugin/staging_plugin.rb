@@ -208,7 +208,7 @@ echo "$STARTED" >> #{pidfile_dir}/run.pid
 
   def copy_source_files(dest = nil)
     dest ||= app_dir
-    system "cp -a #{File.join(source_directory, "*")} #{dest}"
+    system "cp -a #{File.join(source_directory, ".")} #{dest}"
   end
 
   def bound_services
